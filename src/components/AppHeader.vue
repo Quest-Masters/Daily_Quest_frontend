@@ -1,12 +1,34 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserLoginStore } from '@/modules/user/login/login-store.js'
 import { storeToRefs } from 'pinia'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 
 const isMenuOpen = ref(false)
 const loginStore = useUserLoginStore()
-const { isLoggedIn } = storeToRefs(loginStore)
+const { isLoggedIn, expiresAt } = storeToRefs(loginStore)
+
+// 실시간 갱신을 위한 현재 시간
+const now = ref(new Date())
+
+// 1초마다 현재 시간을 갱신하여 타이머가 반응형으로 작동하게 함
+setInterval(() => {
+  now.value = new Date()
+}, 1000)
+
+// 남은 로그인 유지 시간 계산
+const loginExpiresAt = computed(() => {
+  if (!expiresAt.value) return null
+
+  const expire = new Date(expiresAt.value)
+  const diffMs = expire.getTime() - now.value.getTime()
+
+  if (diffMs <= 0) return '만료됨'
+
+  const minutes = Math.floor(diffMs / 60000)
+  const seconds = Math.floor((diffMs % 60000) / 1000)
+  return `${minutes}분 ${seconds}초 남음`
+})
 
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value
@@ -35,20 +57,24 @@ const logout = () => {
       <nav class="nav" :class="{ open: isMenuOpen }">
         <ul class="nav-list">
           <li v-if="isLoggedIn">
-            <router-link to="/quests">퀘스트 목록</router-link>
+            <router-link to="/quests">Quest list</router-link>
+          </li>
+          <li v-if="isLoggedIn">
+            <router-link to="/quest-calendar">Quest calendar</router-link>
           </li>
           <li v-if="isLoggedIn">
             <router-link to="/profile">My Page</router-link>
           </li>
           <li v-if="!isLoggedIn">
-            <router-link to="/login">로그인</router-link>
+            <router-link to="/login">Login</router-link>
           </li>
           <li v-if="!isLoggedIn">
-            <router-link to="/register">회원가입</router-link>
+            <router-link to="/register">Signup</router-link>
           </li>
           <li v-if="isLoggedIn">
-            <base-button @click="logout" class="logout-btn">로그아웃</base-button>
+            <base-button @click="logout" class="logout-btn">Logout</base-button>
           </li>
+          <li v-if="isLoggedIn && loginExpiresAt">{{ loginExpiresAt }}</li>
         </ul>
       </nav>
     </div>
@@ -60,7 +86,7 @@ const logout = () => {
   width: 100%;
   background-color: var(--card-color);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 1rem 0;
+  padding: 0.4rem 0;
 }
 
 .header-container {
@@ -68,7 +94,7 @@ const logout = () => {
   display: flex;
   align-items: center;
   position: relative;
-  padding: 0 2rem;
+  padding: 0 1rem;
 }
 
 /* 로고 */
