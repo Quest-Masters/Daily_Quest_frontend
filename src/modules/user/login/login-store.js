@@ -8,7 +8,7 @@ export const useUserLoginStore = defineStore('userLogin', () => {
   const token = ref('')
   const expiresAt = ref(null)
   const errorMessage = ref('')
-
+  //로그인 수행
   const login = async ({ id, password }) => {
     try {
       const response = await axios.post('/api/users/login', {
@@ -41,6 +41,7 @@ export const useUserLoginStore = defineStore('userLogin', () => {
     }
   }
 
+  //로그아웃 수행
   const logout = () => {
     isLoggedIn.value = false
     currentUser.value = null
@@ -51,6 +52,25 @@ export const useUserLoginStore = defineStore('userLogin', () => {
     localStorage.removeItem('expires_at')
   }
 
+  //세션 복원 기능 추가
+  const restoreSession = () => {
+    const storedToken = localStorage.getItem('access_token')
+    const storedExpiresAt = localStorage.getItem('expires_at')
+
+    if (storedToken && storedExpiresAt) {
+      const now = new Date()
+      const expire = new Date(storedExpiresAt)
+
+      if (now < expire) {
+        token.value = storedToken
+        expiresAt.value = storedExpiresAt
+        isLoggedIn.value = true
+      } else {
+        logout()
+      }
+    }
+  }
+
   return {
     isLoggedIn,
     currentUser,
@@ -59,5 +79,6 @@ export const useUserLoginStore = defineStore('userLogin', () => {
     errorMessage,
     login,
     logout,
+    restoreSession,
   }
 })
