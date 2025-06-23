@@ -6,6 +6,7 @@ import { useUserRegisterStore } from '@/modules/user/register/user-store.js'
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useValidation } from '@/modules/user/use-validation.js'
+import axios from 'axios'
 
 const registerStore = useUserRegisterStore()
 const router = useRouter()
@@ -41,9 +42,52 @@ watch(() => form.name, validateName)
 watch(() => [form.email.id, form.selectedDomain, form.customDomain], validateEmail)
 watch(() => [form.phone.first, form.phone.middle, form.phone.last], validatePhone)
 
+const isDuplicateId = ref(null)
+const idChecked = ref(false)
+
+const checkDuplicateId = async () => {
+  if (!form.id) {
+    errors.id = '아이디를 입력해주세요'
+    return
+  }
+
+  try {
+    const res = await axios.get(`/api/users/check-id`, {
+      params: { id: form.id },
+    })
+
+    isDuplicateId.value = res.data
+    idChecked.value = true
+
+    if (res.data) {
+      errors.id = '이미 사용 중인 아이디입니다.'
+    } else {
+      errors.id = ''
+      alert('사용 가능한 아이디입니다.')
+    }
+  } catch (e) {
+    console.error(e)
+    errors.id = '중복 확인 중 오류가 발생했습니다.'
+  }
+}
+
+watch(
+  () => form.id,
+  () => {
+    isDuplicateId.value = null
+    idChecked.value = false
+  },
+)
+
 const handleSubmit = async () => {
   isLoading.value = true
   errorMessage.value = ''
+
+  if (!idChecked.value || isDuplicateId.value) {
+    alert(!idChecked.value ? '아이디 중복 확인을 해주세요!' : '이미 사용 중인 아이디입니다.')
+    isLoading.value = false
+    return
+  }
 
   const isValid = validateAll()
   if (!isValid) {
@@ -52,13 +96,37 @@ const handleSubmit = async () => {
     return
   }
 
+  // ✅ 원하는 구조로 email 객체를 명시적으로 구성
+  const formData = {
+    id: form.id,
+    password: form.password,
+    confirmPassword: form.confirmPassword,
+    name: form.name,
+    email: {
+      id: form.email.id,
+      selectedDomain: form.selectedDomain,
+      customDomain: form.customDomain,
+    },
+    phone: {
+      first: form.phone.first,
+      middle: form.phone.middle,
+      last: form.phone.last,
+    },
+    agreeTerms: form.agreeTerms,
+  }
+
+  // ✅ 콘솔에 출력
+  console.log('백엔드 전송 데이터:', JSON.stringify(formData, null, 2))
+
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    // ✅ 실제 axios API 요청
+    const response = await axios.post('/api/users/register', formData)
+
     alert('회원가입 성공!')
     router.push('/login')
   } catch (err) {
-    errorMessage.value = '회원가입에 실패'
-    console.error('register error: ', err)
+    errorMessage.value = '회원가입에 실패했습니다.'
+    console.error('회원가입 에러:', err.response?.data || err.message)
   } finally {
     isLoading.value = false
   }
@@ -67,15 +135,21 @@ const handleSubmit = async () => {
 
 <template>
   <form @submit.prevent="handleSubmit" class="register-form">
-    <base-input
-      id="id"
-      label="아이디"
-      v-model="form.id"
-      type="text"
-      placeholder="아이디를 입력하세요."
-      :error="errors.id"
-      required
-    />
+    <div class="form-group">
+      <label for="id" class="form-label">아이디</label>
+      <div class="input-with-button">
+        <input
+          id="id"
+          v-model="form.id"
+          type="text"
+          placeholder="아이디를 입력하세요."
+          class="form-input"
+          required
+        />
+        <BaseButton type="button" @click="checkDuplicateId" variant="secondary">확인</BaseButton>
+      </div>
+      <p v-if="errors.id" class="error-message">{{ errors.id }}</p>
+    </div>
 
     <base-input
       id="name"
@@ -304,5 +378,10 @@ const handleSubmit = async () => {
   font-size: 0.875rem;
   margin-top: 0.5rem;
   margin-bottom: 0;
+}
+
+.input-with-button {
+  display: flex;
+  gap: 0.5rem;
 }
 </style>
