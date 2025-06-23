@@ -8,6 +8,7 @@ import { useValidation } from '@/modules/user/use-validation.js'
 
 const isLoading = ref(false)
 const errorMessage = ref('')
+const loginExpiresAt = ref(null) // 로그인 유지 시간 표시용
 
 const form = reactive({
   id: '',
@@ -31,6 +32,7 @@ watch(() => form.password, validatePassword)
 const handleSubmit = async () => {
   isLoading.value = true
   errorMessage.value = ''
+  loginExpiresAt.value = null
 
   const isValidation = validateLogin()
   if (!isValidation) {
@@ -39,20 +41,23 @@ const handleSubmit = async () => {
     return
   }
 
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  try {
+    const success = await loginStore.login({
+      id: form.id,
+      password: form.password,
+    })
 
-  const success = loginStore.login({
-    id: form.id,
-    password: form.password,
-  })
-
-  if (success) {
-    router.push('/')
-  } else {
-    errorMessage.value = loginStore.errorMessage
+    if (success) {
+      loginExpiresAt.value = loginStore.expiresAt // Pinia에서 받은 로그인 만료 시간
+      router.push('/')
+    } else {
+      errorMessage.value = loginStore.errorMessage
+    }
+  } catch (e) {
+    errorMessage.value = '로그인 처리 중 오류가 발생했습니다.'
+  } finally {
+    isLoading.value = false
   }
-
-  isLoading.value = false
 }
 </script>
 
