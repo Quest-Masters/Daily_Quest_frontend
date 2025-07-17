@@ -52,8 +52,9 @@ const checkDuplicateId = async () => {
   }
 
   try {
-    const res = await axios.get(`/api/users/check-id`, {
+    const res = await axios.get('/api/users/check-id', {
       params: { id: form.id },
+      withCredentials: true,
     })
 
     isDuplicateId.value = res.data

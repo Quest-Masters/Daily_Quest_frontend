@@ -3,10 +3,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserLoginStore } from '@/modules/user/login/login-store.js'
 import { storeToRefs } from 'pinia'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
+import { useRouter } from 'vue-router'
 
 const isMenuOpen = ref(false)
 const loginStore = useUserLoginStore()
 const { isLoggedIn, expiresAt } = storeToRefs(loginStore)
+
+const router = useRouter()
 
 // 실시간 갱신을 위한 현재 시간
 const now = ref(new Date())
@@ -36,6 +39,7 @@ const toggleMenu = () => {
 
 const logout = () => {
   loginStore.logout()
+  router.push('/')
 }
 </script>
 
@@ -72,9 +76,12 @@ const logout = () => {
             <router-link to="/register">Signup</router-link>
           </li>
           <li v-if="isLoggedIn">
-            <base-button @click="logout" class="logout-btn">Logout</base-button>
+            <base-button to="/" @click="logout" class="logout-btn">Logout</base-button>
           </li>
           <li v-if="isLoggedIn && loginExpiresAt">{{ loginExpiresAt }}</li>
+          <li v-if="isLoggedIn">
+            <base-button class="renew-btn" @click="refreshSession">세션 갱신</base-button>
+          </li>
         </ul>
       </nav>
     </div>
