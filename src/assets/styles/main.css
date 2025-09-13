@@ -1,19 +1,20 @@
 :root {
   /* 기본 색상 변수 */
-  --primary-color: #8FD694;
-  --primary-light: #B5E6B9;
-  --primary-dark: #6AB46F;
-  --secondary-color: #FFD166;
-  --accent-color: #06D6A0;
+  --primary-color: #8fd694;
+  --primary-light: #b5e6b9;
+  --primary-dark: #6ab46f;
+  --secondary-color: #ffd166;
+  --accent-color: #06d6a0;
   --text-color: #333333;
   --text-light: #666666;
-  --background-color: #FFFFFF;
-  --card-background: #F8F9FA;
-  --border-color: #E1E1E1;
-  --success-color: #28A745;
-  --error-color: #DC3545;
-  --warning-color: #FFC107;
-  --info-color: #17A2B8;
+  --background-color: #ffffff;
+  --card-background: #f8f9fa;
+  --border-color: #e1e1e1;
+  --success-color: #28a745;
+  --error-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #17a2b8;
+  --background-modal: #cdef8aca;
 
   /* 크기 및 간격 */
   --border-radius: 8px;
@@ -38,38 +39,38 @@
 
 /* 라이트 테마 (기본) */
 .light-theme {
-  --primary-color: #8FD694;
-  --primary-light: #B5E6B9;
-  --primary-dark: #6AB46F;
+  --primary-color: #8fd694;
+  --primary-light: #b5e6b9;
+  --primary-dark: #6ab46f;
   --text-color: #333333;
   --text-light: #666666;
-  --background-color: #FFFFFF;
-  --card-background: #F8F9FA;
-  --border-color: #E1E1E1;
+  --background-color: #ffffff;
+  --card-background: #f8f9fa;
+  --border-color: #e1e1e1;
 }
 
 /* 다크 테마 */
 .dark-theme {
-  --primary-color: #6AB46F;
-  --primary-light: #8FD694;
-  --primary-dark: #4A944F;
-  --text-color: #E1E1E1;
-  --text-light: #B0B0B0;
+  --primary-color: #6ab46f;
+  --primary-light: #8fd694;
+  --primary-dark: #4a944f;
+  --text-color: #e1e1e1;
+  --text-light: #b0b0b0;
   --background-color: #121212;
-  --card-background: #1E1E1E;
+  --card-background: #1e1e1e;
   --border-color: #333333;
 }
 
 /* 판타지 테마 */
 .fantasy-theme {
-  --primary-color: #7ED957;
-  --primary-light: #A0E878;
-  --primary-dark: #5CB82E;
-  --secondary-color: #9C6ADE;
-  --accent-color: #FFB627;
-  --background-color: #F0F7EA;
-  --card-background: #FFFFFF;
-  --border-color: #D1E7C7;
+  --primary-color: #7ed957;
+  --primary-light: #a0e878;
+  --primary-dark: #5cb82e;
+  --secondary-color: #9c6ade;
+  --accent-color: #ffb627;
+  --background-color: #f0f7ea;
+  --card-background: #ffffff;
+  --border-color: #d1e7c7;
 }
 
 /* 전역 스타일 */
@@ -84,10 +85,17 @@ body {
   color: var(--text-color);
   background-color: var(--background-color);
   line-height: 1.6;
-  transition: background-color var(--transition-speed), color var(--transition-speed);
+  transition:
+    background-color var(--transition-speed),
+    color var(--transition-speed);
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   margin-bottom: var(--spacing-md);
   font-weight: 600;
 }
@@ -129,7 +137,7 @@ a:hover {
 }
 
 .btn-secondary:hover {
-  background-color: #E6BC5C;
+  background-color: #e6bc5c;
 }
 
 .btn-outline {
@@ -150,7 +158,9 @@ a:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   padding: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
-  transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+  transition:
+    transform var(--transition-speed),
+    box-shadow var(--transition-speed);
 }
 
 .card:hover {
@@ -190,22 +200,46 @@ a:hover {
   text-align: center;
 }
 
-.mt-1 { margin-top: var(--spacing-xs); }
-.mt-2 { margin-top: var(--spacing-sm); }
-.mt-3 { margin-top: var(--spacing-md); }
-.mt-4 { margin-top: var(--spacing-lg); }
-.mt-5 { margin-top: var(--spacing-xl); }
+.mt-1 {
+  margin-top: var(--spacing-xs);
+}
+.mt-2 {
+  margin-top: var(--spacing-sm);
+}
+.mt-3 {
+  margin-top: var(--spacing-md);
+}
+.mt-4 {
+  margin-top: var(--spacing-lg);
+}
+.mt-5 {
+  margin-top: var(--spacing-xl);
+}
 
-.mb-1 { margin-bottom: var(--spacing-xs); }
-.mb-2 { margin-bottom: var(--spacing-sm); }
-.mb-3 { margin-bottom: var(--spacing-md); }
-.mb-4 { margin-bottom: var(--spacing-lg); }
-.mb-5 { margin-bottom: var(--spacing-xl); }
+.mb-1 {
+  margin-bottom: var(--spacing-xs);
+}
+.mb-2 {
+  margin-bottom: var(--spacing-sm);
+}
+.mb-3 {
+  margin-bottom: var(--spacing-md);
+}
+.mb-4 {
+  margin-bottom: var(--spacing-lg);
+}
+.mb-5 {
+  margin-bottom: var(--spacing-xl);
+}
 
 /* 애니메이션 */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .fade-in {
