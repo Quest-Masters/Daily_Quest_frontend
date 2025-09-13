@@ -2,7 +2,7 @@
 import PersonalInformation from '@/modules/user/register/components/PersonalInformation.vue'
 import BaseInput from '@/components/BaseSetting/BaseInput.vue'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
-import { useUserRegisterStore } from '@/modules/user/register/user-store.js'
+import { useUserRegisterStore } from '../user-store'
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useValidation } from '@/modules/user/use-validation.js'
@@ -54,7 +54,6 @@ const checkDuplicateId = async () => {
   try {
     const res = await axios.get('/api/users/check-id', {
       params: { id: form.id },
-      withCredentials: true,
     })
 
     isDuplicateId.value = res.data
