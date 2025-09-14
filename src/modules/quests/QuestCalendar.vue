@@ -6,38 +6,36 @@
     </div>
 
     <div class="calendar-controls">
-      <div class="view-toggle">
-        <base-button
-          :variant="showBars ? 'primary' : 'secondary'"
-          @click="showBars = !showBars"
-          size="small"
-        >
-          <BarChart3 class="button-icon" />
-          {{ showBars ? '막대 보기' : '점 보기' }}
-        </base-button>
+      <div class="view-controls">
+        <div class="view-toggle">
+          <base-button
+            v-for="mode in viewModes"
+            :key="mode.value"
+            :variant="currentViewMode === mode.value ? 'primary' : 'secondary'"
+            @click="currentViewMode = mode.value"
+            size="small"
+            class="mode-button"
+          >
+            <component :is="mode.icon" class="button-icon" />
+            {{ mode.label }}
+          </base-button>
+        </div>
+        
       </div>
 
-      <div class="legend" v-if="showBars">
-        <div class="legend-item">
-          <div class="legend-bar pending"></div>
-          <span>대기중</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-bar in-progress"></div>
-          <span>진행중</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-bar completed"></div>
-          <span>완료</span>
+      <div class="legend" v-if="currentViewMode !== 'dot'">
+        <div class="legend-item" v-for="status in statusLegend" :key="status.key">
+          <div :class="['legend-indicator', status.class]"></div>
+          <span>{{ status.label }}</span>
         </div>
       </div>
     </div>
 
-    <div class="calendar-container">
+    <div class="calendar-container" :class="[`mode-${currentViewMode}`]">
       <Calendar
         :events="questEvents"
         :selected-date="selectedDate"
-        :show-quest-bars="showBars"
+        :view-mode="currentViewMode"
         @date-selected="onDateSelected"
         @month-changed="onMonthChanged"
       />
@@ -56,7 +54,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { BarChart3 } from 'lucide-vue-next'
+import { 
+  Calendar as CalendarIcon,
+  Grid3X3,
+  Clock,
+  Target,
+  Sparkles,
+  Moon,
+  Sun,
+  Trees,
+  Gem,
+  Zap
+} from 'lucide-vue-next'
 import Calendar from './Calendar.vue'
 import QuestListModal from './QuestListModal.vue'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
@@ -65,8 +74,22 @@ import axios from 'axios'
 const router = useRouter()
 const selectedDate = ref(new Date())
 const showQuestModal = ref(false)
-const showBars = ref(true)
+const currentViewMode = ref('deadline')
 const quests = ref([])
+
+const viewModes = ref([
+  { value: 'deadline', label: '마감일', icon: Clock },
+  { value: 'card', label: '카드', icon: Grid3X3 },
+  { value: 'icon', label: '아이콘', icon: Target },
+  { value: 'timeline', label: '타임라인', icon: CalendarIcon },
+  { value: 'dot', label: '점', icon: Sparkles }
+])
+
+const statusLegend = ref([
+  { key: 'pending', label: '대기중', class: 'status-pending' },
+  { key: 'in-progress', label: '진행중', class: 'status-in-progress' },
+  { key: 'completed', label: '완료', class: 'status-completed' }
+])
 
 const isValidDate = (d) => d instanceof Date && !isNaN(d.getTime())
 
@@ -160,57 +183,140 @@ const goToQuestDetail = (questId) => {
 }
 
 .calendar-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+  background: linear-gradient(135deg, rgba(143, 214, 148, 0.1), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(143, 214, 148, 0.2);
+  box-shadow: 0 8px 32px rgba(143, 214, 148, 0.1);
 }
 
-.view-toggle .button-icon {
+.view-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem;
+  border-radius: 12px;
+  backdrop-filter: blur(5px);
+}
+
+.mode-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.mode-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(143, 214, 148, 0.3);
+  border-color: var(--primary-color);
+}
+
+.mode-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.mode-button:hover::before {
+  left: 100%;
+}
+
+.button-icon {
   width: 1rem;
   height: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.mode-button:hover .button-icon {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .legend {
   display: flex;
-  gap: 1.5rem;
+  gap: 2rem;
   flex-wrap: wrap;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  backdrop-filter: blur(5px);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   font-size: 0.875rem;
   color: var(--text-secondary);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
 }
 
-.legend-bar {
-  width: 20px;
-  height: 12px;
-  border-radius: 6px;
+.legend-item:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.legend-bar.pending {
-  background-color: #6b7280;
-  opacity: 0.7;
+.legend-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.legend-bar.in-progress {
-  background: linear-gradient(45deg, #8fd694 0%, rgba(255, 255, 255, 0.2) 50%, #8fd694 100%);
-  animation: progressShimmer 2s ease-in-out infinite;
+.legend-indicator.status-pending {
+  background: linear-gradient(135deg, #6b7280, #9ca3af);
 }
 
-.legend-bar.completed {
-  background-color: #22c55e;
-  opacity: 0.8;
+.legend-indicator.status-in-progress {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  animation: legendPulse 2s ease-in-out infinite;
+}
+
+.legend-indicator.status-completed {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  position: relative;
+}
+
+.legend-indicator.status-completed::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
 }
 
 .calendar-container {
   margin-bottom: 2rem;
+  transition: all 0.5s ease;
 }
+
+
 
 @keyframes progressShimmer {
   0%,
@@ -222,13 +328,75 @@ const goToQuestDetail = (questId) => {
   }
 }
 
-@media (max-width: 640px) {
-  .calendar-controls {
-    flex-direction: column;
-    align-items: stretch;
+@keyframes legendPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(143, 214, 148, 0.7);
   }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 0 8px rgba(143, 214, 148, 0);
+  }
+}
 
+@keyframes floatingGlow {
+  0%, 100% {
+    box-shadow: 0 8px 32px rgba(143, 214, 148, 0.1);
+    transform: translateY(0px);
+  }
+  50% {
+    box-shadow: 0 12px 40px rgba(143, 214, 148, 0.2);
+    transform: translateY(-2px);
+  }
+}
+
+@media (max-width: 768px) {
+  .calendar-controls {
+    padding: 1rem;
+  }
+  
+  .view-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .view-toggle,
+  .theme-toggle {
+    justify-content: center;
+  }
+  
   .legend {
+    gap: 1rem;
+  }
+  
+  .legend-item {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .calendar-controls {
+    padding: 0.75rem;
+  }
+  
+  .view-toggle,
+  .theme-toggle {
+    gap: 0.25rem;
+  }
+  
+  .mode-button,
+  .theme-button {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .legend {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .legend-item {
     justify-content: center;
   }
 }
