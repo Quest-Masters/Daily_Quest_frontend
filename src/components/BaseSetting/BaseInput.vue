@@ -66,7 +66,7 @@ defineEmits(['update:modelValue'])
 }
 
 .form-input {
-  width: 100%;
+  width: 94%;
   padding: 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;

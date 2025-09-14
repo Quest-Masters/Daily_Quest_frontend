@@ -16,7 +16,7 @@ const { isLoggedIn } = storeToRefs(loginStore)
         획득하세요!
       </p>
       <div class="hero-buttons">
-        <router-link to="/register" v-if="!isLoggedIn">
+        <router-link to="/login" v-if="!isLoggedIn">
           <base-button variant="primary">시작하기</base-button>
         </router-link>
         <router-link to="/quests" v-if="isLoggedIn">

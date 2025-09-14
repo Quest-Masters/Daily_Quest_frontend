@@ -3,10 +3,13 @@ import { ref } from 'vue'
 import { useUserLoginStore } from '@/modules/user/login/login-store.js'
 import { storeToRefs } from 'pinia'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
+import { useRouter } from 'vue-router'
+import { List, Calendar, User, LogIn, UserPlus, LogOut } from 'lucide-vue-next'
 
 const isMenuOpen = ref(false)
 const loginStore = useUserLoginStore()
 const { isLoggedIn } = storeToRefs(loginStore)
+const router = useRouter()
 
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value
@@ -14,6 +17,8 @@ const toggleMenu = () => {
 
 const logout = () => {
   loginStore.logout()
+  isMenuOpen.value = false
+  router.push('/')
 }
 </script>
 
@@ -35,19 +40,40 @@ const logout = () => {
       <nav class="nav" :class="{ open: isMenuOpen }">
         <ul class="nav-list">
           <li v-if="isLoggedIn">
-            <router-link to="/quests">퀘스트 목록</router-link>
+            <router-link to="/quests" class="nav-link">
+              <List :size="18" />
+              <span>Quest list</span>
+            </router-link>
           </li>
           <li v-if="isLoggedIn">
-            <router-link to="/profile">My Page</router-link>
-          </li>
-          <li v-if="!isLoggedIn">
-            <router-link to="/login">로그인</router-link>
-          </li>
-          <li v-if="!isLoggedIn">
-            <router-link to="/register">회원가입</router-link>
+            <router-link to="/quest-calendar" class="nav-link">
+              <Calendar :size="18" />
+              <span>Quest calendar</span>
+            </router-link>
           </li>
           <li v-if="isLoggedIn">
-            <base-button @click="logout" class="logout-btn">로그아웃</base-button>
+            <router-link to="/profile" class="nav-link">
+              <User :size="18" />
+              <span>My Page</span>
+            </router-link>
+          </li>
+          <li v-if="!isLoggedIn">
+            <router-link to="/login" class="nav-link">
+              <LogIn :size="18" />
+              <span>Login</span>
+            </router-link>
+          </li>
+          <li v-if="!isLoggedIn">
+            <router-link to="/register" class="nav-link">
+              <UserPlus :size="18" />
+              <span>Signup</span>
+            </router-link>
+          </li>
+          <li v-if="isLoggedIn">
+            <base-button @click="logout" class="logout-btn">
+              <LogOut :size="16" />
+              <span>Logout</span>
+            </base-button>
           </li>
         </ul>
       </nav>
@@ -60,7 +86,7 @@ const logout = () => {
   width: 100%;
   background-color: var(--card-color);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 1rem 0;
+  padding: 0.4rem 0;
 }
 
 .header-container {
@@ -68,7 +94,9 @@ const logout = () => {
   display: flex;
   align-items: center;
   position: relative;
-  padding: 0 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
 /* 로고 */
@@ -83,9 +111,8 @@ const logout = () => {
 }
 
 .logo-image {
-  margin-left: 2rem;
-  width: 6rem;
-  height: 6rem;
+  width: 4rem;
+  height: 4rem;
 }
 
 .hamburger {
@@ -119,6 +146,7 @@ const logout = () => {
   width: 12.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 10;
+  border-radius: 8px;
 }
 
 .nav.open .nav-list {
@@ -126,27 +154,47 @@ const logout = () => {
 }
 
 .nav-list li {
-  padding: 1.5rem 1rem;
-  min-width: 100px; /* 항목 크기 일정하게 유지 */
+  padding: 1rem;
+  min-width: 100px;
   text-align: center;
 }
 
-.nav-list a {
+.nav-list .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   text-decoration: none;
-  color: var(--text-primary);
+  color: var(--primarlogouty-dark);
   font-weight: 500;
   transition: color 0.2s ease;
 }
 
-.nav-list a:hover,
-.nav-list {
+.nav-list .nav-link:hover {
+  color: var(--primary-color);
+}
+
+.nav-list .nav-link.router-link-active {
   color: var(--primary-color);
 }
 
 .logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   width: 6rem;
   height: 3rem;
   font-size: 0.8rem;
+  background-color: var(--primary-light);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.logout-btn:hover {
+  background-color: #d32f2f;
 }
 
 @media (min-width: 769px) {
@@ -158,11 +206,13 @@ const logout = () => {
     background: none;
     box-shadow: none;
     width: auto;
+    margin: 0;
+    padding: 0;
   }
 
   .nav-list li {
     margin-left: 1.5rem;
-    padding: 1rem;
+    padding: 0.5rem;
   }
 
   .hamburger {
@@ -173,6 +223,31 @@ const logout = () => {
 @media (max-width: 768px) {
   .hamburger {
     display: flex;
+  }
+
+  .logo-image {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-container {
+    padding: 0 0.75rem;
+  }
+
+  .nav-list {
+    right: -0.75rem;
+    left: -0.75rem;
+    width: auto;
+  }
+
+  .nav-list .nav-link {
+    gap: 0.4rem;
+  }
+
+  .logout-btn {
+    gap: 0.3rem;
   }
 }
 </style>
