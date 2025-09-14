@@ -20,7 +20,6 @@
             {{ mode.label }}
           </base-button>
         </div>
-        
       </div>
 
       <div class="legend" v-if="currentViewMode !== 'dot'">
@@ -54,18 +53,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { 
-  Calendar as CalendarIcon,
-  Grid3X3,
-  Clock,
-  Target,
-  Sparkles,
-  Moon,
-  Sun,
-  Trees,
-  Gem,
-  Zap
-} from 'lucide-vue-next'
+import { Calendar as CalendarIcon, Grid3X3, Clock, Target, Sparkles } from 'lucide-vue-next'
 import Calendar from './Calendar.vue'
 import QuestListModal from './QuestListModal.vue'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
@@ -82,13 +70,13 @@ const viewModes = ref([
   { value: 'card', label: '카드', icon: Grid3X3 },
   { value: 'icon', label: '아이콘', icon: Target },
   { value: 'timeline', label: '타임라인', icon: CalendarIcon },
-  { value: 'dot', label: '점', icon: Sparkles }
+  { value: 'dot', label: '점', icon: Sparkles },
 ])
 
 const statusLegend = ref([
   { key: 'pending', label: '대기중', class: 'status-pending' },
   { key: 'in-progress', label: '진행중', class: 'status-in-progress' },
-  { key: 'completed', label: '완료', class: 'status-completed' }
+  { key: 'completed', label: '완료', class: 'status-completed' },
 ])
 
 const isValidDate = (d) => d instanceof Date && !isNaN(d.getTime())
@@ -115,40 +103,57 @@ onMounted(async () => {
 
 const questEvents = computed(() => {
   return quests.value
-    .filter((quest) => isValidDate(quest.startDate) && isValidDate(quest.dueDate))
-    .map((quest) => ({
-      id: quest.id,
-      title: quest.title,
-      date: quest.startDate.toISOString().split('T')[0],
-      startDate: quest.startDate.toISOString().split('T')[0],
-      dueDate: quest.dueDate.toISOString().split('T')[0],
-      type: quest.status === 'completed' ? 'completed' : 'quest',
-      status: quest.status,
-      category: quest.category,
-      xp: quest.xp,
-      difficulty: quest.difficulty,
-      description: quest.description,
-    }))
+    .filter((quest) => {
+      return quest.dueDate && isValidDate(new Date(quest.dueDate))
+    })
+    .map((quest) => {
+      const startDate = quest.createdAt ? new Date(quest.createdAt) : new Date()
+      const dueDate = new Date(quest.dueDate)
+
+      // 타임존 문제를 피하기 위해 로컬 날짜로 변환
+      const localStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
+      const localDueDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+
+      return {
+        id: quest.id,
+        title: quest.title,
+        date: localStartDate.toISOString().split('T')[0],
+        startDate: localStartDate.toISOString().split('T')[0],
+        dueDate: localDueDate.toISOString().split('T')[0],
+        type: quest.status === 'completed' ? 'completed' : 'quest',
+        status: quest.status,
+        category: quest.category,
+        xp: quest.xp || 50,
+        difficulty: quest.difficulty,
+        description: quest.description,
+      }
+    })
 })
 
 const selectedDateQuests = computed(() => {
   if (!selectedDate.value) return []
 
-  const dateString = selectedDate.value.toISOString().split('T')[0]
-  return questEvents.value.filter((quest) => {
-    const startDate = new Date(quest.startDate)
-    const endDate = new Date(quest.dueDate)
-    const selectedDateObj = new Date(dateString)
+  // 선택된 날짜를 YYYY-MM-DD 형식으로 변환 (타임존 문제 해결)
+  const selectedDateObj = new Date(selectedDate.value)
+  const localSelectedDate = new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), selectedDateObj.getDate())
+  const selectedDateStr = localSelectedDate.toISOString().split('T')[0]
 
-    return selectedDateObj >= startDate && selectedDateObj <= endDate
+  console.log('선택된 날짜:', selectedDateStr)
+  console.log('퀘스트 목록:', questEvents.value.map(q => ({ title: q.title, dueDate: q.dueDate })))
+
+  // 선택된 날짜가 마감일인 퀘스트만 필터링
+  const filteredQuests = questEvents.value.filter((quest) => {
+    return quest.dueDate === selectedDateStr
   })
+
+  console.log('필터된 퀘스트:', filteredQuests)
+  return filteredQuests
 })
 
 const onDateSelected = (dateObj) => {
   selectedDate.value = dateObj.date
-  if (dateObj.hasEvents) {
-    showQuestModal.value = true
-  }
+  // 항상 모달을 열어서 해당 날짜의 퀘스트 확인
+  showQuestModal.value = true
 }
 
 const onMonthChanged = (date) => {
@@ -316,8 +321,6 @@ const goToQuestDetail = (questId) => {
   transition: all 0.5s ease;
 }
 
-
-
 @keyframes progressShimmer {
   0%,
   100% {
@@ -329,18 +332,24 @@ const goToQuestDetail = (questId) => {
 }
 
 @keyframes legendPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(143, 214, 148, 0.7);
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.2),
+      0 0 0 0 rgba(143, 214, 148, 0.7);
   }
   50% {
     transform: scale(1.1);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 0 8px rgba(143, 214, 148, 0);
+    box-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      0 0 0 8px rgba(143, 214, 148, 0);
   }
 }
 
 @keyframes floatingGlow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 8px 32px rgba(143, 214, 148, 0.1);
     transform: translateY(0px);
   }
@@ -354,21 +363,21 @@ const goToQuestDetail = (questId) => {
   .calendar-controls {
     padding: 1rem;
   }
-  
+
   .view-controls {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .view-toggle,
   .theme-toggle {
     justify-content: center;
   }
-  
+
   .legend {
     gap: 1rem;
   }
-  
+
   .legend-item {
     padding: 0.25rem 0.5rem;
     font-size: 0.8rem;
@@ -379,23 +388,23 @@ const goToQuestDetail = (questId) => {
   .calendar-controls {
     padding: 0.75rem;
   }
-  
+
   .view-toggle,
   .theme-toggle {
     gap: 0.25rem;
   }
-  
+
   .mode-button,
   .theme-button {
     padding: 0.5rem;
     font-size: 0.75rem;
   }
-  
+
   .legend {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .legend-item {
     justify-content: center;
   }
