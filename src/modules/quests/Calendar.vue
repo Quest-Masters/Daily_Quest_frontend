@@ -12,11 +12,7 @@
 
     <div class="calendar-body">
       <div class="weekdays">
-        <div
-          v-for="day in weekdays"
-          :key="day"
-          class="weekday"
-        >
+        <div v-for="day in weekdays" :key="day" class="weekday">
           {{ day }}
         </div>
       </div>
@@ -29,11 +25,11 @@
             'calendar-day',
             {
               'other-month': !day.inCurrentMonth,
-              'today': day.isToday,
-              'selected': day.isSelected,
+              today: day.isToday,
+              selected: day.isSelected,
               'has-events': day.hasEvents,
-              'weekend': day.isWeekend
-            }
+              weekend: day.isWeekend,
+            },
           ]"
           @click="selectDate(day)"
         >
@@ -43,11 +39,7 @@
             <div
               v-for="event in day.events"
               :key="event.id"
-              :class="[
-                'event-item',
-                `event-${event.status}`,
-                `view-${viewMode}`
-              ]"
+              :class="['event-item', `event-${event.status}`, `view-${viewMode}`]"
               :title="`${event.title} - ${getStatusText(event.status)}`"
             >
               <template v-if="viewMode === 'deadline'">
@@ -103,16 +95,16 @@ import { ChevronLeft, ChevronRight, Clock, Target } from 'lucide-vue-next'
 const props = defineProps({
   events: {
     type: Array,
-    default: () => []
+    default: () => [],
   },
   selectedDate: {
     type: Date,
-    default: () => new Date()
+    default: () => new Date(),
   },
   viewMode: {
     type: String,
-    default: 'deadline'
-  }
+    default: 'deadline',
+  },
 })
 
 const emit = defineEmits(['date-selected', 'month-changed'])
@@ -127,7 +119,7 @@ const monthTitle = computed(() => {
   const date = new Date(currentYear.value, currentMonth.value)
   return date.toLocaleDateString('ko-KR', {
     year: 'numeric',
-    month: 'long'
+    month: 'long',
   })
 })
 
@@ -152,7 +144,7 @@ const calendarDays = computed(() => {
     // 타임존 문제를 피하기 위해 로컬 날짜로 변환
     const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
     const dateStr = localDate.toISOString().split('T')[0]
-    const dayEvents = props.events.filter(event => event.dueDate === dateStr)
+    const dayEvents = props.events.filter((event) => event.dueDate === dateStr)
 
     const isToday = localDate.getTime() === today.getTime()
     const isSelected = localDate.getTime() === selectedDate.getTime()
@@ -169,7 +161,7 @@ const calendarDays = computed(() => {
       isSelected,
       hasEvents: dayEvents.length > 0,
       events: dayEvents,
-      isWeekend
+      isWeekend,
     })
   }
 
@@ -180,7 +172,7 @@ const selectDate = (day) => {
   emit('date-selected', {
     date: day.fullDate,
     hasEvents: day.hasEvents,
-    events: day.events
+    events: day.events,
   })
 }
 
@@ -209,7 +201,7 @@ const getStatusText = (status) => {
     pending: '대기중',
     'in-progress': '진행중',
     completed: '완료',
-    failed: '실패'
+    failed: '실패',
   }
   return statusMap[status] || '대기중'
 }
@@ -220,7 +212,7 @@ const getCategoryText = (category) => {
     learning: '학습',
     skill: '스킬',
     social: '소셜',
-    creative: '창작'
+    creative: '창작',
   }
   return categoryMap[category] || '기타'
 }
@@ -333,16 +325,12 @@ watch([currentYear, currentMonth], () => {
 }
 
 .calendar-day.selected {
-  background-color: var(--accent-color);
-  color: white;
-}
-
-.calendar-day.weekend {
-  background-color: rgba(255, 152, 0, 0.05);
+  border: 2px solid var(--primary-color);
+  background-color: transparent;
 }
 
 .calendar-day.weekend.today {
-  background: linear-gradient(135deg, var(--accent-color), rgba(255, 152, 0, 0.8));
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
 }
 
 .day-number {
@@ -488,19 +476,23 @@ watch([currentYear, currentMonth], () => {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.status-pending, .event-pending {
+.status-pending,
+.event-pending {
   background-color: #6b7280;
 }
 
-.status-in-progress, .event-in-progress {
+.status-in-progress,
+.event-in-progress {
   background-color: var(--primary-color);
 }
 
-.status-completed, .event-completed {
+.status-completed,
+.event-completed {
   background-color: var(--success-color);
 }
 
-.status-failed, .event-failed {
+.status-failed,
+.event-failed {
   background-color: var(--error-color);
 }
 
