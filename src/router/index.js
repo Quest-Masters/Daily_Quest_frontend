@@ -73,12 +73,6 @@ const routes = [
     meta: { requiresAuth: true },
   },
   // {
-  //   path: '/quest-calendar',
-  //   name: 'QuestCalendar',
-  //   component: QuestCalendar,
-  //   meta: { requiresAuth: true },
-  // },
-  // {
   //   path: '/quest/:id',
   //   name: 'QuestDetail',
   //   component: QuestDetail,

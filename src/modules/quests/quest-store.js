@@ -96,11 +96,43 @@ export const useQuestStore = defineStore('quest', () => {
   const toggleQuestComplete = async (questId) => {
     const quest = quests.value.find(q => q.id === questId)
     if (!quest) return false
-    
-    return await updateQuest(questId, { 
-      ...quest, 
-      completed: !quest.completed 
+
+    return await updateQuest(questId, {
+      ...quest,
+      completed: !quest.completed
     })
+  }
+
+  // 마감일이 지난 퀘스트 체크 및 상태 업데이트
+  const checkExpiredQuests = () => {
+    const now = new Date()
+    let hasExpiredQuests = false
+
+    quests.value.forEach(quest => {
+      const dueDate = new Date(quest.dueDate)
+      const isExpired = dueDate < now
+
+      // 마감일이 지났고 아직 대기중이거나 진행중인 퀘스트만 마감 처리
+      if (isExpired && (quest.status === 'pending' || quest.status === 'in-progress')) {
+        quest.status = 'expired'
+        hasExpiredQuests = true
+      }
+    })
+
+    return hasExpiredQuests
+  }
+
+  // 만료된 퀘스트를 서버에 업데이트
+  const updateExpiredQuests = async () => {
+    const expiredQuests = quests.value.filter(q => q.status === 'expired')
+
+    for (const quest of expiredQuests) {
+      try {
+        await updateQuest(quest.id, { ...quest, status: 'expired' })
+      } catch (err) {
+        console.error(`퀘스트 ${quest.id} 만료 상태 업데이트 실패:`, err)
+      }
+    }
   }
 
   return {
@@ -112,6 +144,8 @@ export const useQuestStore = defineStore('quest', () => {
     createQuest,
     updateQuest,
     deleteQuest,
-    toggleQuestComplete
+    toggleQuestComplete,
+    checkExpiredQuests,
+    updateExpiredQuests
   }
 })

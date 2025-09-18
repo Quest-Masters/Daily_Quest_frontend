@@ -39,6 +39,7 @@
           <option value="in-progress">진행중</option>
           <option value="completed">완료</option>
           <option value="failed">실패</option>
+          <option value="expired">마감됨</option>
         </select>
       </div>
 
@@ -103,22 +104,27 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { Sword, Sparkles } from 'lucide-vue-next'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 import QuestItem from './QuestItem.vue'
 import QuestCreateModal from './AiQuestGenerator.vue'
+import { useQuestStore } from './quest-store.js'
 
 const router = useRouter()
 const showCreateModal = ref(false)
 const quests = ref([])
+const questStore = useQuestStore()
 
 const selectedStatus = ref('')
 const selectedCategory = ref('')
 const selectedDifficulty = ref('')
 const selectedDate = ref(new Date().toISOString().substring(0, 10))
+
+// 자동 마감 처리를 위한 인터벌
+let expiredCheckInterval = null
 
 const fetchQuests = async () => {
   try {
@@ -134,12 +140,68 @@ const fetchQuests = async () => {
       progress: q.progress ?? 0,
       dueDate: new Date(q.dueDate),
     }))
+
+    // 퀘스트 로드 후 만료된 퀘스트 체크
+    checkAndUpdateExpiredQuests()
   } catch (err) {
     console.error('퀘스트 불러오기 실패:', err)
   }
 }
 
-onMounted(fetchQuests)
+// 만료된 퀘스트 체크 및 업데이트
+const checkAndUpdateExpiredQuests = () => {
+  const now = new Date()
+  let hasExpiredQuests = false
+
+  quests.value.forEach(quest => {
+    const dueDate = new Date(quest.dueDate)
+    const isExpired = dueDate < now
+
+    // 마감일이 지났고 아직 대기중이거나 진행중인 퀘스트만 마감 처리
+    if (isExpired && (quest.status === 'pending' || quest.status === 'in-progress')) {
+      quest.status = 'expired'
+      hasExpiredQuests = true
+
+      // 서버에 만료 상태 업데이트
+      updateQuestStatus(quest.id, 'expired')
+    }
+  })
+
+  if (hasExpiredQuests) {
+    console.log('만료된 퀘스트가 발견되어 상태를 업데이트했습니다.')
+  }
+}
+
+// 퀘스트 상태 업데이트 (서버)
+const updateQuestStatus = async (questId, status) => {
+  try {
+    await axios.put(`/api/quests/${questId}`,
+      { status },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      }
+    )
+  } catch (err) {
+    console.error(`퀘스트 ${questId} 상태 업데이트 실패:`, err)
+  }
+}
+
+onMounted(() => {
+  fetchQuests()
+
+  // 10분마다 만료된 퀘스트 체크
+  expiredCheckInterval = setInterval(() => {
+    checkAndUpdateExpiredQuests()
+  }, 10 * 60 * 1000) // 10분 = 600,000ms
+})
+
+onUnmounted(() => {
+  if (expiredCheckInterval) {
+    clearInterval(expiredCheckInterval)
+  }
+})
 
 const dateMatches = (quest) => {
   if (!selectedDate.value) return true

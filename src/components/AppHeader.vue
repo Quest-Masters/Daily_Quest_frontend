@@ -4,7 +4,7 @@ import { useUserLoginStore } from '@/modules/user/login/login-store.js'
 import { storeToRefs } from 'pinia'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 import { useRouter } from 'vue-router'
-import { List, Calendar, User, LogIn, UserPlus, LogOut } from 'lucide-vue-next'
+import { List, User, LogIn, UserPlus, LogOut, Calendar } from 'lucide-vue-next'
 
 const isMenuOpen = ref(false)
 const loginStore = useUserLoginStore()
@@ -48,7 +48,7 @@ const logout = () => {
           <li v-if="isLoggedIn">
             <router-link to="/quest-calendar" class="nav-link">
               <Calendar :size="18" />
-              <span>Quest calendar</span>
+              <span>Quest Calendar</span>
             </router-link>
           </li>
           <li v-if="isLoggedIn">

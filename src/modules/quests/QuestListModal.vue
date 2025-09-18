@@ -1,70 +1,97 @@
 <template>
-  <div v-if="visible" class="modal-overlay" @click.self="close">
-    <div class="modal">
+  <div v-if="visible" class="modal-overlay" @click="closeModal">
+    <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <div class="header-content">
-          <h2>{{ formatDate(date) }} 마감 퀘스트</h2>
-          <p class="header-subtitle">오늘 마감되는 {{ quests.length }}개의 퀘스트</p>
-        </div>
-        <button class="close-button" @click="close">&times;</button>
+        <h3 class="modal-title">
+          <Calendar class="title-icon" />
+          {{ formatDate(date) }} 퀘스트
+        </h3>
+        <button @click="closeModal" class="close-button">
+          <X class="close-icon" />
+        </button>
       </div>
 
       <div class="modal-body">
-        <div v-if="quests.length === 0" class="empty-state">
-          <div class="empty-icon">📅</div>
-          <h3>마감되는 퀘스트가 없습니다</h3>
-          <p>오늘은 여유로운 하루를 보내세요!</p>
+        <div v-if="quests.length === 0" class="no-quests">
+          <Sword class="no-quest-icon" />
+          <p>이 날짜에는 마감인 퀘스트가 없습니다.</p>
         </div>
 
-        <div v-else class="quest-list">
+        <div v-else class="quests-list">
           <div
             v-for="quest in quests"
             :key="quest.id"
-            :class="['quest-item', `status-${quest.status}`, `priority-${getPriority(quest)}`]"
-            @click="select(quest.id)"
+            :class="['quest-item-modal', `status-${quest.status}`, {
+              'disabled': quest.status === 'expired' || quest.status === 'failed'
+            }]"
+            @click="canInteractWithQuest(quest) ? selectQuest(quest.id) : null"
           >
             <div class="quest-header">
-              <div class="quest-icon">
-                <component :is="getCategoryIcon(quest.category)" class="category-icon" />
+              <div class="quest-status">
+                <div :class="['status-indicator', `status-${quest.status}`]"></div>
+                <span class="status-text">{{ getStatusText(quest.status) }}</span>
               </div>
-              <div class="quest-badges">
-                <span :class="['status-badge', `status-${quest.status}`]">
-                  {{ getStatusText(quest.status) }}
-                </span>
-                <span class="priority-badge" v-if="getPriority(quest) === 'high'"> 🔥 긴급 </span>
+              <div :class="['difficulty-badge', `difficulty-${quest.difficulty}`]">
+                {{ getDifficultyText(quest.difficulty) }}
               </div>
             </div>
 
             <div class="quest-content">
-              <h3 class="quest-title">{{ quest.title }}</h3>
+              <h4 class="quest-title">{{ quest.title }}</h4>
               <p class="quest-description">{{ quest.description }}</p>
 
               <div class="quest-meta">
-                <div class="meta-item">
-                  <span class="meta-label">카테고리:</span>
-                  <span class="meta-value">{{ getCategoryText(quest.category) }}</span>
+                <div class="quest-category">
+                  <Tag class="meta-icon" />
+                  <span>{{ getCategoryText(quest.category) }}</span>
                 </div>
-                <div class="meta-item">
-                  <span class="meta-label">난이도:</span>
-                  <span :class="['difficulty-badge', `difficulty-${quest.difficulty}`]">
-                    {{ getDifficultyText(quest.difficulty) }}
-                  </span>
+                <div class="quest-xp">
+                  <Star class="meta-icon" />
+                  <span>{{ quest.xp }} XP</span>
                 </div>
-                <div class="meta-item xp-item">
-                  <span class="meta-label">보상:</span>
-                  <span class="xp-value">{{ quest.xp }} XP</span>
+                <div class="quest-due">
+                  <Clock class="meta-icon" />
+                  <span>{{ formatDueTime(quest.dueDate) }}</span>
                 </div>
               </div>
             </div>
 
-            <div class="quest-action">
-              <div class="deadline-indicator">
-                <span class="deadline-text">오늘 마감</span>
-                <div
-                  :class="['deadline-dot', quest.status === 'completed' ? 'completed' : 'pending']"
-                ></div>
-              </div>
+            <div class="quest-actions">
+              <base-button
+                :variant="canInteractWithQuest(quest) ? 'secondary' : 'disabled'"
+                size="small"
+                :disabled="!canInteractWithQuest(quest)"
+                @click.stop="canInteractWithQuest(quest) ? selectQuest(quest.id) : null"
+              >
+                <ExternalLink class="action-icon" />
+                {{ canInteractWithQuest(quest) ? '상세보기' : '마감됨' }}
+              </base-button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="quest-summary">
+          <div class="summary-item">
+            <span class="summary-label">총 퀘스트</span>
+            <span class="summary-value">{{ quests.length }}개</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">완료</span>
+            <span class="summary-value completed">{{ completedQuests }}개</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">진행중</span>
+            <span class="summary-value in-progress">{{ inProgressQuests }}개</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">마감됨</span>
+            <span class="summary-value expired">{{ expiredQuests }}개</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">총 XP</span>
+            <span class="summary-value xp">{{ totalXP }}</span>
           </div>
         </div>
       </div>
@@ -74,25 +101,58 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Dumbbell, BookOpen, Code, Users, Palette, Home, Target } from 'lucide-vue-next'
+import { Calendar, X, Sword, Tag, Star, Clock, ExternalLink } from 'lucide-vue-next'
+import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 
 const props = defineProps({
-  visible: Boolean,
-  date: Date,
-  quests: Array,
+  visible: {
+    type: Boolean,
+    default: false
+  },
+  date: {
+    type: Date,
+    required: true
+  },
+  quests: {
+    type: Array,
+    default: () => []
+  }
 })
 
 const emit = defineEmits(['close', 'quest-selected'])
 
-const close = () => emit('close')
-const select = (questId) => emit('quest-selected', questId)
+const closeModal = () => {
+  emit('close')
+}
+
+const selectQuest = (questId) => {
+  emit('quest-selected', questId)
+}
+
+const canInteractWithQuest = (quest) => {
+  return quest.status !== 'expired' && quest.status !== 'failed'
+}
 
 const formatDate = (date) => {
-  return date.toLocaleDateString('ko-KR', {
+  if (!date) return ''
+
+  const dateObj = new Date(date)
+  return dateObj.toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    weekday: 'short',
+    weekday: 'long'
+  })
+}
+
+const formatDueTime = (dueDate) => {
+  if (!dueDate) return '시간 미정'
+
+  const date = new Date(dueDate)
+  return date.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
   })
 }
 
@@ -101,9 +161,19 @@ const getStatusText = (status) => {
     pending: '대기중',
     'in-progress': '진행중',
     completed: '완료',
-    failed: '실패',
+    failed: '마감됨',
+    expired: '마감됨'
   }
-  return statusMap[status] || status
+  return statusMap[status] || '대기중'
+}
+
+const getDifficultyText = (difficulty) => {
+  const difficultyMap = {
+    easy: '쉬움',
+    medium: '보통',
+    hard: '어려움'
+  }
+  return difficultyMap[difficulty] || '보통'
 }
 
 const getCategoryText = (category) => {
@@ -112,40 +182,28 @@ const getCategoryText = (category) => {
     learning: '학습',
     skill: '스킬',
     social: '소셜',
-    creative: '창작',
-    life: '생활',
+    creative: '창작'
   }
   return categoryMap[category] || '기타'
 }
 
-const getDifficultyText = (difficulty) => {
-  const difficultyMap = {
-    easy: '쉬움',
-    medium: '보통',
-    hard: '어려움',
-  }
-  return difficultyMap[difficulty] || '보통'
-}
+const completedQuests = computed(() => {
+  return props.quests.filter(quest => quest.status === 'completed').length
+})
 
-const getPriority = (quest) => {
-  const xp = quest.xp || 0
-  if (xp >= 150) return 'high'
-  if (xp >= 100) return 'medium'
-  return 'low'
-}
+const inProgressQuests = computed(() => {
+  return props.quests.filter(quest => quest.status === 'in-progress').length
+})
 
-const getCategoryIcon = (category) => {
-  const iconMap = {
-    health: Dumbbell,
-    learning: BookOpen,
-    skill: Code,
-    social: Users,
-    creative: Palette,
-    life: Home,
-    default: Target,
-  }
-  return iconMap[category] || iconMap.default
-}
+const expiredQuests = computed(() => {
+  return props.quests.filter(quest => quest.status === 'expired' || quest.status === 'failed').length
+})
+
+const totalXP = computed(() => {
+  return props.quests.reduce((total, quest) => {
+    return total + (quest.status === 'completed' ? quest.xp : 0)
+  }, 0)
+})
 </script>
 
 <style scoped>
@@ -153,144 +211,162 @@ const getCategoryIcon = (category) => {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100%;
   background-color: rgba(0, 0, 0, 0.6);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  backdrop-filter: blur(4px);
 }
 
-.modal {
-  background-color: var(--card-background);
+.modal-content {
+  background-color: var(--card-color);
   border-radius: 16px;
-  width: 100%;
-  max-width: 700px;
-  max-height: 85vh;
+  max-width: 600px;
+  max-height: 80vh;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 2rem;
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-  color: white;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(135deg, var(--primary-light), rgba(255, 255, 255, 0.8));
 }
 
-.header-content h2 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.header-subtitle {
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin: 0;
-  font-size: 0.875rem;
-  opacity: 0.9;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.title-icon {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .close-button {
   background: none;
   border: none;
-  padding: 0.75rem;
-  border-radius: 8px;
   cursor: pointer;
-  color: white;
-  font-size: 1.5rem;
-  transition: all 0.2s;
-  line-height: 1;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  transform: scale(1.1);
+  background-color: rgba(239, 68, 68, 0.1);
 }
 
-.modal-body {
-  padding: 1.5rem;
-  max-height: 60vh;
-  overflow-y: auto;
-  background-color: var(--background-color);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 3rem 2rem;
+.close-icon {
+  width: 1.25rem;
+  height: 1.25rem;
   color: var(--text-secondary);
 }
 
-.empty-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
+.close-button:hover .close-icon {
+  color: var(--error-color);
 }
 
-.empty-state h3 {
-  margin: 0 0 0.5rem 0;
-  color: var(--text-primary);
-  font-size: 1.25rem;
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
 }
 
-.empty-state p {
+.no-quests {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary);
+}
+
+.no-quest-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  opacity: 0.5;
+}
+
+.no-quests p {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
-.quest-list {
+.quests-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.quest-item {
-  background-color: var(--card-background);
+.quest-item-modal {
+  background-color: var(--background-color);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1.25rem;
+  border-left: 4px solid transparent;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 2px solid transparent;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
+  border: 1px solid var(--border-color);
 }
 
-.quest-item::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color, #ffd166));
-}
-
-.quest-item:hover {
+.quest-item-modal:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  border-color: var(--primary-color);
+  background-color: var(--card-color);
 }
 
-.quest-item.status-completed {
-  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-  border-color: #22c55e;
+.quest-item-modal.status-pending {
+  border-left-color: #6b7280;
 }
 
-.quest-item.status-completed::before {
-  background: linear-gradient(90deg, #22c55e, #16a34a);
+.quest-item-modal.status-in-progress {
+  border-left-color: var(--primary-color);
 }
 
-.quest-item.priority-high {
-  border-color: #ef4444;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+.quest-item-modal.status-completed {
+  border-left-color: var(--success-color);
 }
 
-.quest-item.priority-high::before {
-  background: linear-gradient(90deg, #ef4444, #dc2626);
+.quest-item-modal.status-failed,
+.quest-item-modal.status-expired {
+  border-left-color: #8b5cf6;
+}
+
+.quest-item-modal.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.quest-item-modal.disabled:hover {
+  transform: none;
+  box-shadow: none;
+  background-color: var(--background-color);
 }
 
 .quest-header {
@@ -300,62 +376,62 @@ const getCategoryIcon = (category) => {
   margin-bottom: 1rem;
 }
 
-.quest-icon {
+.quest-status {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background-color: var(--primary-light);
-  border-radius: 10px;
-}
-
-.category-icon {
-  width: 20px;
-  height: 20px;
-  color: var(--primary-color);
-}
-
-.quest-badges {
-  display: flex;
   gap: 0.5rem;
-  align-items: center;
 }
 
-.status-badge {
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-indicator.status-pending {
+  background-color: #6b7280;
+}
+
+.status-indicator.status-in-progress {
+  background-color: var(--primary-color);
+}
+
+.status-indicator.status-completed {
+  background-color: var(--success-color);
+}
+
+.status-indicator.status-failed,
+.status-indicator.status-expired {
+  background-color: #8b5cf6;
+}
+
+.status-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.difficulty-badge {
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
+  text-transform: uppercase;
 }
 
-.status-badge.status-pending {
-  background-color: #f3f4f6;
-  color: #6b7280;
-}
-
-.status-badge.status-in-progress {
-  background-color: #dbeafe;
-  color: #2563eb;
-}
-
-.status-badge.status-completed {
+.difficulty-easy {
   background-color: #dcfce7;
   color: #16a34a;
 }
 
-.status-badge.status-failed {
-  background-color: #fee2e2;
-  color: #dc2626;
+.difficulty-medium {
+  background-color: #fef3c7;
+  color: #d97706;
 }
 
-.priority-badge {
-  padding: 0.25rem 0.5rem;
+.difficulty-hard {
   background-color: #fee2e2;
   color: #dc2626;
-  border-radius: 8px;
-  font-size: 0.7rem;
-  font-weight: 600;
 }
 
 .quest-content {
@@ -378,165 +454,144 @@ const getCategoryIcon = (category) => {
 }
 
 .quest-meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.75rem;
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
-.meta-item {
+.quest-category,
+.quest-xp,
+.quest-due {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.quest-category {
+  color: var(--text-secondary);
+}
+
+.quest-xp {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.quest-due {
+  color: var(--text-secondary);
+}
+
+.meta-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.quest-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.action-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 1.25rem 1.5rem;
+  background-color: var(--background-color);
+}
+
+.quest-summary {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.summary-item {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.25rem;
 }
 
-.meta-label {
-  font-size: 0.7rem;
+.summary-label {
+  font-size: 0.75rem;
   color: var(--text-secondary);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.meta-value {
-  font-size: 0.875rem;
+.summary-value {
+  font-size: 1.125rem;
+  font-weight: 600;
   color: var(--text-primary);
-  font-weight: 500;
 }
 
-.difficulty-badge {
-  padding: 0.125rem 0.5rem;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  align-self: flex-start;
+.summary-value.completed {
+  color: var(--success-color);
 }
 
-.difficulty-easy {
-  background-color: #dcfce7;
-  color: #16a34a;
-}
-
-.difficulty-medium {
-  background-color: #fef3c7;
-  color: #d97706;
-}
-
-.difficulty-hard {
-  background-color: #fee2e2;
-  color: #dc2626;
-}
-
-.xp-item {
-  background-color: var(--primary-light);
-  padding: 0.5rem;
-  border-radius: 8px;
-}
-
-.xp-value {
+.summary-value.in-progress {
   color: var(--primary-color);
-  font-weight: 700;
-  font-size: 0.875rem;
 }
 
-.quest-action {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
+.summary-value.xp {
+  color: var(--accent-color);
 }
 
-.deadline-indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: var(--background-color);
-  border-radius: 20px;
-  border: 1px solid var(--border-color);
+.summary-value.expired {
+  color: #8b5cf6;
 }
 
-.deadline-text {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.deadline-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-
-.deadline-dot.pending {
-  background-color: #ef4444;
-}
-
-.deadline-dot.completed {
-  background-color: #22c55e;
-  animation: none;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.1);
-  }
-}
-
-/* 반응형 디자인 */
 @media (max-width: 768px) {
-  .modal {
-    margin: 0.5rem;
+  .modal-content {
+    width: 95%;
     max-height: 90vh;
   }
 
-  .modal-header {
-    padding: 1.5rem;
-  }
-
-  .header-content h2 {
-    font-size: 1.25rem;
-  }
-
-  .modal-body {
-    padding: 1rem;
-  }
-
-  .quest-item {
+  .modal-header,
+  .modal-body,
+  .modal-footer {
     padding: 1rem;
   }
 
   .quest-meta {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
+    gap: 1rem;
   }
 
-  .meta-item {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
+  .quest-summary {
+    gap: 0.75rem;
+  }
+
+  .summary-item {
+    flex: 1;
+    min-width: 60px;
+  }
+
+  .modal-title {
+    font-size: 1.125rem;
   }
 }
 
 @media (max-width: 480px) {
-  .quest-header {
+  .modal-content {
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .quest-item-modal {
+    padding: 1rem;
+  }
+
+  .quest-meta {
     flex-direction: column;
-    gap: 0.75rem;
-    align-items: flex-start;
+    gap: 0.5rem;
   }
 
-  .quest-badges {
-    align-self: stretch;
-    justify-content: space-between;
-  }
-
-  .deadline-indicator {
-    align-self: stretch;
+  .quest-summary {
     justify-content: center;
   }
 }

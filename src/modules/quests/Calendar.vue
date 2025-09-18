@@ -1,127 +1,150 @@
 <template>
-  <div class="calendar">
-    <div class="calendar-header">
+  <div class="calendar-container">
+    <!-- Navigation and Month Display -->
+    <div class="calendar-nav">
       <button @click="previousMonth" class="nav-button">
-        <ChevronLeft />
+        <ChevronLeft class="nav-icon" />
       </button>
-      <h2 class="calendar-title">{{ currentMonthYear }}</h2>
+
+      <div class="month-display">
+        <div class="month-text">{{ currentMonthName.toUpperCase() }}</div>
+      </div>
+
       <button @click="nextMonth" class="nav-button">
-        <ChevronRight />
+        <ChevronRight class="nav-icon" />
       </button>
     </div>
 
+    <!-- Calendar Grid -->
     <div class="calendar-grid">
-      <div class="calendar-weekdays">
-        <div v-for="day in weekdays" :key="day" class="weekday">
+      <!-- Day Headers -->
+      <div class="day-headers">
+        <div v-for="day in dayHeaders" :key="day" class="day-header">
           {{ day }}
         </div>
       </div>
 
+      <!-- Calendar Days -->
       <div class="calendar-days">
         <div
-          v-for="date in calendarDates"
-          :key="date.key"
-          :class="[
-            'calendar-day',
-            {
-              'other-month': !date.isCurrentMonth,
-              today: date.isToday,
-              selected: date.isSelected,
-              'has-events': date.hasEvents,
-            },
-          ]"
-          @click="selectDate(date)"
+          v-for="day in calendarDays"
+          :key="day.key"
+          class="calendar-day"
+          :class="{
+            'other-month': !day.inCurrentMonth,
+            today: day.isToday,
+            'has-event': day.hasEvents,
+          }"
+          @click="selectDate(day)"
         >
-          <span class="day-number">{{ date.day }}</span>
+          <div class="day-number">{{ day.date }}</div>
+          <div v-if="day.hasEvents" class="events-container">
+            <!-- Deadline View -->
+            <template v-if="viewMode === 'deadline'">
+              <div
+                v-for="event in day.events.slice(0, 2)"
+                :key="event.id"
+                :class="['event-deadline', `status-${event.status}`]"
+              >
+                <component :is="getStatusIcon(event.status)" class="event-icon" />
+                <span class="event-title">{{ event.title }}</span>
+                <span class="event-status-text">{{ getStatusText(event.status) }}</span>
+              </div>
+              <div v-if="day.events.length > 2" class="event-more">
+                +{{ day.events.length - 2 }}개
+              </div>
+            </template>
 
-          <!-- 마감일 보기 -->
-          <div v-if="viewMode === 'deadline' && date.deadlineQuests.length" class="deadline-quests">
-            <div
-              v-for="quest in date.deadlineQuests.slice(0, 2)"
-              :key="quest.id"
-              :class="['deadline-quest', `status-${quest.status}`, `priority-${quest.priority}`]"
-              :title="`${quest.title} (마감: ${quest.status === 'completed' ? '완료' : '오늘'})`"
-            >
-              <div class="quest-icon">
-                <component :is="getCategoryIcon(quest.category)" class="category-icon" />
-              </div>
-              <div class="quest-info">
-                <span class="quest-title-short">{{ quest.shortTitle }}</span>
-                <span class="quest-xp">{{ quest.xp }}XP</span>
-              </div>
-              <div :class="['status-indicator', `status-${quest.status}`]"></div>
-            </div>
-            <div v-if="date.deadlineQuests.length > 2" class="more-quests">
-              +{{ date.deadlineQuests.length - 2 }}개
-            </div>
-          </div>
-
-          <!-- 카드 보기 -->
-          <div v-else-if="viewMode === 'card' && date.questCards.length" class="quest-cards">
-            <div
-              v-for="quest in date.questCards.slice(0, 1)"
-              :key="quest.id"
-              :class="['quest-card', `status-${quest.status}`]"
-              :title="quest.title"
-            >
-              <div class="card-header">
-                <component :is="getCategoryIcon(quest.category)" class="card-icon" />
-                <span class="card-xp">{{ quest.xp }}</span>
-              </div>
-              <div class="card-title">{{ quest.shortTitle }}</div>
-              <div class="card-progress">
-                <div class="progress-bar">
-                  <div class="progress-fill" :style="{ width: quest.progress + '%' }"></div>
+            <!-- Card View -->
+            <template v-else-if="viewMode === 'card'">
+              <div
+                v-for="event in day.events.slice(0, 2)"
+                :key="event.id"
+                :class="['event-card', `status-${event.status}`]"
+              >
+                <div class="event-card-header">
+                  <component :is="getStatusIcon(event.status)" class="card-status-icon" />
+                  <span class="event-title">{{ event.title }}</span>
+                  <div :class="['event-status', `status-${event.status}`]"></div>
+                </div>
+                <div class="event-meta">
+                  <span class="event-xp">{{ event.xp }}XP</span>
+                  <span class="event-category">{{ getCategoryText(event.category) }}</span>
+                  <span class="event-status-badge">{{ getStatusText(event.status) }}</span>
                 </div>
               </div>
-            </div>
-            <div v-if="date.questCards.length > 1" class="more-cards">
-              +{{ date.questCards.length - 1 }}
-            </div>
-          </div>
+              <div v-if="day.events.length > 2" class="event-more">
+                +{{ day.events.length - 2 }}개
+              </div>
+            </template>
 
-          <!-- 아이콘 보기 -->
-          <div v-else-if="viewMode === 'icon' && date.iconQuests.length" class="icon-quests">
-            <div
-              v-for="quest in date.iconQuests.slice(0, 4)"
-              :key="quest.id"
-              :class="['quest-icon-item', `status-${quest.status}`]"
-              :title="`${quest.title} (${getStatusText(quest.status)})`"
-            >
-              <component :is="getCategoryIcon(quest.category)" class="quest-icon-svg" />
-              <div :class="['icon-status', `status-${quest.status}`]"></div>
-            </div>
-            <div v-if="date.iconQuests.length > 4" class="more-icons">
-              +{{ date.iconQuests.length - 4 }}
-            </div>
-          </div>
+            <!-- Icon View -->
+            <template v-else-if="viewMode === 'icon'">
+              <div class="event-icons">
+                <div
+                  v-for="event in day.events.slice(0, 4)"
+                  :key="event.id"
+                  :class="['event-icon-badge', `status-${event.status}`]"
+                  :title="`${event.title} - ${getStatusText(event.status)}`"
+                >
+                  <component :is="getStatusIcon(event.status)" class="event-icon" />
+                </div>
+                <div v-if="day.events.length > 4" class="event-more-icon">
+                  +{{ day.events.length - 4 }}
+                </div>
+              </div>
+              <div class="icon-status-summary">
+                <div class="status-counts">
+                  <span
+                    v-if="getStatusCount(day.events, 'completed')"
+                    class="status-count completed"
+                    >✓{{ getStatusCount(day.events, 'completed') }}</span
+                  >
+                  <span v-if="getExpiredCount(day.events)" class="status-count expired"
+                    >⏰{{ getExpiredCount(day.events) }}</span
+                  >
+                </div>
+              </div>
+            </template>
 
-          <!-- 타임라인 보기 -->
-          <div
-            v-else-if="viewMode === 'timeline' && date.timelineQuests.length"
-            class="timeline-quests"
-          >
-            <div
-              v-for="quest in date.timelineQuests.slice(0, 3)"
-              :key="quest.id"
-              :class="['timeline-quest', quest.timelineType, `status-${quest.status}`]"
-              :title="`${quest.title} (${quest.timelineType === 'start' ? '시작' : '마감'})`"
-            >
-              <div class="timeline-marker"></div>
-              <span class="timeline-title">{{ quest.shortTitle }}</span>
-            </div>
-          </div>
+            <!-- Timeline View -->
+            <template v-else-if="viewMode === 'timeline'">
+              <div v-for="event in day.events.slice(0, 3)" :key="event.id" class="event-timeline">
+                <div :class="['timeline-bar', `status-${event.status}`]"></div>
+                <component :is="getStatusIcon(event.status)" class="timeline-icon" />
+                <span class="timeline-title">{{ event.title }}</span>
+                <span class="timeline-status">{{ getStatusText(event.status) }}</span>
+              </div>
+              <div v-if="day.events.length > 3" class="event-more">
+                +{{ day.events.length - 3 }}개
+              </div>
+            </template>
 
-          <!-- 기본 점 보기 -->
-          <div v-else-if="viewMode === 'dot' && date.events.length > 0" class="event-indicators">
-            <div
-              v-for="event in date.events.slice(0, 3)"
-              :key="event.id"
-              :class="['event-dot', `event-${event.type || event.status}`]"
-            ></div>
-            <span v-if="date.events.length > 3" class="more-events">
-              +{{ date.events.length - 3 }}
-            </span>
+            <!-- Dot View -->
+            <template v-else-if="viewMode === 'dot'">
+              <div class="event-dots">
+                <div
+                  v-for="event in day.events"
+                  :key="event.id"
+                  :class="['event-dot', `status-${event.status}`]"
+                  :title="`${event.title} - ${getStatusText(event.status)}`"
+                ></div>
+              </div>
+              <div class="dot-status-legend">
+                <div class="status-dots-summary">
+                  <span
+                    v-if="getStatusCount(day.events, 'completed')"
+                    class="dot-summary completed"
+                  >
+                    <span class="dot-mini status-completed"></span
+                    >{{ getStatusCount(day.events, 'completed') }}
+                  </span>
+                  <span v-if="getExpiredCount(day.events)" class="dot-summary expired">
+                    <span class="dot-mini status-expired"></span>{{ getExpiredCount(day.events) }}
+                  </span>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -134,14 +157,11 @@ import { ref, computed, watch } from 'vue'
 import {
   ChevronLeft,
   ChevronRight,
-  Dumbbell,
-  BookOpen,
-  Code,
-  Users,
-  Palette,
-  Home,
-  Target,
   Clock,
+  Target,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -155,232 +175,96 @@ const props = defineProps({
   },
   viewMode: {
     type: String,
-    default: 'deadline', // deadline, card, icon, timeline, dot
-    validator: (value) => ['deadline', 'card', 'icon', 'timeline', 'dot'].includes(value),
+    default: 'deadline',
   },
 })
 
 const emit = defineEmits(['date-selected', 'month-changed'])
 
 const currentDate = ref(new Date())
-const selected = ref(props.selectedDate)
+const currentYear = ref(currentDate.value.getFullYear())
+const currentMonth = ref(currentDate.value.getMonth())
 
-const weekdays = ['일', '월', '화', '수', '목', '금', '토']
+const dayHeaders = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-const currentMonthYear = computed(() => {
-  return currentDate.value.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-  })
+const currentMonthName = computed(() => {
+  const date = new Date(currentYear.value, currentMonth.value)
+  return date.toLocaleDateString('en-US', { month: 'long' })
 })
 
-const isValidDate = (date) => date instanceof Date && !isNaN(date.getTime())
-
-const calendarDates = computed(() => {
-  const year = currentDate.value.getFullYear()
-  const month = currentDate.value.getMonth()
-  const firstDay = new Date(year, month, 1)
+const calendarDays = computed(() => {
+  const firstDay = new Date(currentYear.value, currentMonth.value, 1)
+  const lastDay = new Date(currentYear.value, currentMonth.value + 1, 0)
   const startDate = new Date(firstDay)
-  startDate.setDate(startDate.getDate() - firstDay.getDay())
 
+  // Adjust for Monday start (0 = Sunday, 1 = Monday, etc.)
+  const dayOfWeek = (firstDay.getDay() + 6) % 7 // Convert to Monday = 0
+  startDate.setDate(firstDay.getDate() - dayOfWeek)
+
+  const days = []
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const dates = []
+  const selectedDate = new Date(props.selectedDate)
+  selectedDate.setHours(0, 0, 0, 0)
 
   for (let i = 0; i < 42; i++) {
     const date = new Date(startDate)
     date.setDate(startDate.getDate() + i)
-    date.setHours(0, 0, 0, 0)
 
-    const dateEvents = props.events.filter((event) => {
-      const eventDate = new Date(event.date)
-      eventDate.setHours(0, 0, 0, 0)
-      return isValidDate(eventDate) && eventDate.getTime() === date.getTime()
-    })
+    // 타임존 문제를 피하기 위해 로컬 날짜로 변환
+    const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    const dateStr = localDate.toISOString().split('T')[0]
+    const dayEvents = props.events.filter((event) => event.dueDate === dateStr)
 
-    // 각 보기 모드별 데이터 계산
-    const deadlineQuests = calculateDeadlineQuests(date)
-    const questCards = calculateQuestCards(date)
-    const iconQuests = calculateIconQuests(date)
-    const timelineQuests = calculateTimelineQuests(date)
+    const isToday = localDate.getTime() === today.getTime()
+    const isSelected = localDate.getTime() === selectedDate.getTime()
+    const inCurrentMonth = date.getMonth() === currentMonth.value
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6
 
-    dates.push({
-      key: isValidDate(date) ? date.toISOString() : `${i}`,
-      date,
-      day: date.getDate(),
-      isCurrentMonth: date.getMonth() === month,
-      isToday: date.getTime() === today.getTime(),
-      isSelected: selected.value && date.getTime() === selected.value.getTime(),
-      hasEvents:
-        dateEvents.length > 0 ||
-        deadlineQuests.length > 0 ||
-        questCards.length > 0 ||
-        iconQuests.length > 0 ||
-        timelineQuests.length > 0,
-      events: dateEvents,
-      deadlineQuests,
-      questCards,
-      iconQuests,
-      timelineQuests,
+    days.push({
+      key: `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`,
+      date: date.getDate(),
+      fullDate: localDate,
+      dateStr,
+      inCurrentMonth,
+      isToday,
+      isSelected,
+      hasEvents: dayEvents.length > 0,
+      events: dayEvents,
+      isWeekend,
     })
   }
 
-  return dates
+  return days
 })
 
-// 마감일 보기: 마감되는 날짜에만 퀘스트 표시
-const calculateDeadlineQuests = (currentDate) => {
-  const quests = []
-
-  props.events.forEach((event) => {
-    if (event.dueDate) {
-      const dueDate = new Date(event.dueDate)
-      dueDate.setHours(0, 0, 0, 0)
-      const current = new Date(currentDate)
-      current.setHours(0, 0, 0, 0)
-
-      if (dueDate.getTime() === current.getTime()) {
-        quests.push({
-          ...event,
-          shortTitle:
-            event.title && event.title.length > 8
-              ? event.title.substring(0, 8) + '...'
-              : event.title || '퀘스트',
-          priority: calculatePriority(event),
-          progress: calculateProgress(event),
-        })
-      }
-    }
-  })
-
-  return quests.sort((a, b) => {
-    // 우선순위: 미완료 > 완료, 높은 XP > 낮은 XP
-    if (a.status !== b.status) {
-      if (a.status === 'completed') return 1
-      if (b.status === 'completed') return -1
-    }
-    return (b.xp || 0) - (a.xp || 0)
+const selectDate = (day) => {
+  emit('date-selected', {
+    date: day.fullDate,
+    hasEvents: day.hasEvents,
+    events: day.events,
   })
 }
 
-// 카드 보기: 진행 중인 퀘스트를 카드 형태로 표시
-const calculateQuestCards = (currentDate) => {
-  const cards = []
-
-  props.events.forEach((event) => {
-    if (event.startDate && event.dueDate) {
-      const startDate = new Date(event.startDate)
-      const endDate = new Date(event.dueDate)
-      const current = new Date(currentDate)
-
-      startDate.setHours(0, 0, 0, 0)
-      endDate.setHours(0, 0, 0, 0)
-      current.setHours(0, 0, 0, 0)
-
-      if (current >= startDate && current <= endDate) {
-        cards.push({
-          ...event,
-          shortTitle:
-            event.title && event.title.length > 10
-              ? event.title.substring(0, 10) + '...'
-              : event.title || '퀘스트',
-          progress: calculateProgress(event),
-        })
-      }
-    }
-  })
-
-  return cards
-}
-
-// 아이콘 보기: 카테고리별 아이콘으로 표시
-const calculateIconQuests = (currentDate) => {
-  const icons = []
-
-  props.events.forEach((event) => {
-    if (event.startDate && event.dueDate) {
-      const startDate = new Date(event.startDate)
-      const endDate = new Date(event.dueDate)
-      const current = new Date(currentDate)
-
-      startDate.setHours(0, 0, 0, 0)
-      endDate.setHours(0, 0, 0, 0)
-      current.setHours(0, 0, 0, 0)
-
-      if (current >= startDate && current <= endDate) {
-        icons.push(event)
-      }
-    }
-  })
-
-  return icons
-}
-
-// 타임라인 보기: 시작일과 마감일만 표시
-const calculateTimelineQuests = (currentDate) => {
-  const timeline = []
-
-  props.events.forEach((event) => {
-    if (event.startDate && event.dueDate) {
-      const startDate = new Date(event.startDate)
-      const endDate = new Date(event.dueDate)
-      const current = new Date(currentDate)
-
-      startDate.setHours(0, 0, 0, 0)
-      endDate.setHours(0, 0, 0, 0)
-      current.setHours(0, 0, 0, 0)
-
-      if (current.getTime() === startDate.getTime()) {
-        timeline.push({
-          ...event,
-          timelineType: 'start',
-          shortTitle:
-            event.title && event.title.length > 6
-              ? event.title.substring(0, 6) + '...'
-              : event.title || '퀘스트',
-        })
-      } else if (current.getTime() === endDate.getTime()) {
-        timeline.push({
-          ...event,
-          timelineType: 'end',
-          shortTitle:
-            event.title && event.title.length > 6
-              ? event.title.substring(0, 6) + '...'
-              : event.title || '퀘스트',
-        })
-      }
-    }
-  })
-
-  return timeline
-}
-
-const calculatePriority = (quest) => {
-  const xp = quest.xp || 0
-  if (xp >= 150) return 'high'
-  if (xp >= 100) return 'medium'
-  return 'low'
-}
-
-const calculateProgress = (quest) => {
-  // 실제 구현에서는 API에서 진행률을 가져와야 함
-  if (quest.status === 'completed') return 100
-  if (quest.status === 'in-progress') return Math.floor(Math.random() * 80) + 20
-  return 0
-}
-
-const getCategoryIcon = (category) => {
-  const iconMap = {
-    health: Dumbbell,
-    learning: BookOpen,
-    skill: Code,
-    social: Users,
-    creative: Palette,
-    life: Home,
-    default: Target,
+const previousMonth = () => {
+  if (currentMonth.value === 0) {
+    currentMonth.value = 11
+    currentYear.value--
+  } else {
+    currentMonth.value--
   }
-  return iconMap[category] || iconMap.default
+  emit('month-changed', new Date(currentYear.value, currentMonth.value))
+}
+
+const nextMonth = () => {
+  if (currentMonth.value === 11) {
+    currentMonth.value = 0
+    currentYear.value++
+  } else {
+    currentMonth.value++
+  }
+  emit('month-changed', new Date(currentYear.value, currentMonth.value))
 }
 
 const getStatusText = (status) => {
@@ -388,538 +272,883 @@ const getStatusText = (status) => {
     pending: '대기중',
     'in-progress': '진행중',
     completed: '완료',
-    failed: '실패',
+    failed: '마감됨', // failed도 마감됨으로 표시
+    expired: '마감됨',
   }
-  return statusMap[status] || status
+  return statusMap[status] || '대기중'
 }
 
-const selectDate = (dateObj) => {
-  selected.value = dateObj.date
-  emit('date-selected', dateObj)
+const getCategoryText = (category) => {
+  const categoryMap = {
+    health: '건강',
+    learning: '학습',
+    skill: '스킬',
+    social: '소셜',
+    creative: '창작',
+  }
+  return categoryMap[category] || '기타'
 }
 
-const previousMonth = () => {
-  currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() - 1, 1)
-  emit('month-changed', currentDate.value)
+// 상태별 아이콘 반환
+const getStatusIcon = (status) => {
+  const iconMap = {
+    pending: Clock,
+    'in-progress': Target,
+    completed: CheckCircle,
+    failed: AlertTriangle, // failed도 마감됨 아이콘으로
+    expired: AlertTriangle,
+  }
+  return iconMap[status] || Clock
 }
 
-const nextMonth = () => {
-  currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1)
-  emit('month-changed', currentDate.value)
+// 상태별 카운트 반환
+const getStatusCount = (events, status) => {
+  return events.filter((event) => event.status === status).length
 }
 
-watch(
-  () => props.selectedDate,
-  (newDate) => {
-    if (newDate) selected.value = newDate
-  },
-  { immediate: true },
-)
+// 만료된 퀘스트 카운트 (failed + expired 합계)
+const getExpiredCount = (events) => {
+  return events.filter((event) => event.status === 'failed' || event.status === 'expired').length
+}
+
+watch([currentYear, currentMonth], () => {
+  emit('month-changed', new Date(currentYear.value, currentMonth.value))
+})
 </script>
 
 <style scoped>
-.calendar {
-  background-color: var(--card-background);
-  border-radius: 12px;
+.calendar-container {
+  max-width: 900px;
+  margin: 0 auto;
   padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.calendar-header {
+.calendar-nav {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: center;
   margin-bottom: 1.5rem;
-}
-
-.calendar-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
+  position: relative;
 }
 
 .nav-button {
   background: none;
   border: none;
-  padding: 0.75rem;
-  border-radius: 8px;
   cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.2s;
   color: var(--text-secondary);
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: absolute;
+}
+
+.nav-button:first-child {
+  left: 0;
+}
+
+.nav-button:last-child {
+  right: 0;
 }
 
 .nav-button:hover {
   background-color: var(--primary-light);
-  color: var(--primary-color);
-  transform: scale(1.05);
+}
+
+.nav-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.month-display {
+  text-align: center;
+}
+
+.month-text {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .calendar-grid {
-  width: 100%;
+  margin-left: 0;
 }
 
-.calendar-weekdays {
+.day-headers {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
-.weekday {
-  padding: 0.75rem 0.5rem;
+.day-header {
   text-align: center;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--text-secondary);
-  font-size: 0.875rem;
-  background-color: var(--primary-light);
-  border-radius: 6px;
+  padding: 0.5rem;
 }
 
 .calendar-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  background-color: var(--border-color);
-  border-radius: 8px;
-  overflow: hidden;
-  padding: 2px;
+  gap: 0.5rem;
 }
 
 .calendar-day {
-  background-color: var(--background-color);
-  padding: 0.75rem 0.5rem;
-  min-height: 120px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
+  aspect-ratio: 1;
+  background-color: var(--card-color);
+  border: 2px solid transparent;
+  border-radius: 0.75rem;
   display: flex;
   flex-direction: column;
-  border-radius: 6px;
-  border: 2px solid transparent;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  min-height: 90px;
+  padding: 0.5rem 0.375rem;
 }
 
 .calendar-day:hover {
   background-color: var(--primary-light);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-color: var(--primary-color);
+  transform: translateY(-1px);
 }
 
 .calendar-day.other-month {
-  color: var(--text-secondary);
-  opacity: 0.4;
-  background-color: var(--card-background);
+  opacity: 0.3;
 }
 
 .calendar-day.today {
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-  color: white;
-  font-weight: 700;
-  box-shadow: 0 4px 12px rgba(143, 214, 148, 0.4);
+  border-color: var(--text-primary);
+  border-width: 2px;
 }
 
-.calendar-day.selected {
-  background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+.calendar-day.has-event {
+  background-color: var(--primary-light);
+  color: var(--primary-dark);
+  border: 1px solid var(--primary-color);
+}
+
+.calendar-day.has-event:hover {
+  background-color: var(--primary-color);
   color: white;
-  border-color: var(--primary-dark);
 }
 
 .day-number {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  align-self: flex-start;
   font-size: 1rem;
-  z-index: 10;
+  font-weight: 600;
+  margin-bottom: 0.375rem;
+  align-self: flex-start;
+  width: 100%;
+  text-align: left;
 }
 
-/* 마감일 보기 스타일 */
-.deadline-quests {
+/* Events Container */
+.events-container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  overflow: hidden;
+  width: 100%;
 }
 
-.deadline-quest {
+/* Common Event Styles */
+.event-more {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+/* Deadline View */
+.event-deadline {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px;
-  background-color: var(--card-background);
-  border-radius: 8px;
-  border-left: 3px solid var(--primary-color);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
+  gap: 0.25rem;
+  padding: 0.25rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  margin-bottom: 2px;
+  transition: all 0.2s ease;
 }
 
-.deadline-quest:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.event-deadline.status-pending {
+  background-color: var(--text-secondary);
+  color: white;
 }
 
-.deadline-quest.status-completed {
-  border-left-color: #22c55e;
-  opacity: 0.8;
+.event-deadline.status-in-progress {
+  background-color: var(--primary-color);
+  color: white;
 }
 
-.deadline-quest.status-in-progress {
+.event-deadline.status-completed {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.event-deadline.status-failed,
+.event-deadline.status-expired {
+  background-color: #8b5cf6;
+  color: white;
+}
+
+.event-deadline .event-icon {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+.event-deadline .event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  flex: 1;
+}
+
+.event-deadline .event-status-text {
+  font-size: 0.55rem;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+/* Card View */
+.event-card {
+  padding: 0.375rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-size: 0.65rem;
+  margin-bottom: 2px;
+  border-left: 3px solid;
+}
+
+.event-card.status-pending {
+  background-color: rgba(107, 114, 128, 0.1);
+  border-left-color: var(--text-secondary);
+}
+
+.event-card.status-in-progress {
+  background-color: rgba(139, 195, 74, 0.1);
   border-left-color: var(--primary-color);
 }
 
-.deadline-quest.status-pending {
-  border-left-color: #6b7280;
+.event-card.status-completed {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-left-color: var(--success-color);
 }
 
-.deadline-quest.priority-high {
-  border-left-width: 4px;
+.event-card.status-failed,
+.event-card.status-expired {
+  background-color: rgba(139, 92, 246, 0.1);
+  border-left-color: #8b5cf6;
 }
 
-.quest-icon {
+.event-card-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background-color: var(--primary-light);
-  border-radius: 4px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.25rem;
+  gap: 0.25rem;
 }
 
-.category-icon {
-  width: 12px;
-  height: 12px;
-  color: var(--primary-color);
+.card-status-icon {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
 }
 
-.quest-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.quest-title-short {
-  font-size: 0.75rem;
+.event-card .event-title {
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
+  line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
 }
 
-.quest-xp {
-  font-size: 0.625rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.status-indicator {
-  width: 8px;
-  height: 8px;
+.event-status {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.status-indicator.status-completed {
-  background-color: #22c55e;
-}
-
-.status-indicator.status-in-progress {
-  background-color: var(--primary-color);
-  animation: pulse 2s infinite;
-}
-
-.status-indicator.status-pending {
-  background-color: #6b7280;
-}
-
-.more-quests {
-  font-size: 0.625rem;
-  color: var(--text-secondary);
-  text-align: center;
-  padding: 2px;
-  background-color: var(--border-color);
-  border-radius: 4px;
-}
-
-/* 카드 보기 스타일 */
-.quest-cards {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.quest-card {
-  background: linear-gradient(135deg, var(--card-background), var(--background-color));
-  border-radius: 8px;
-  padding: 8px;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.quest-card.status-completed {
-  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-}
-
-.quest-card.status-in-progress {
-  background: linear-gradient(135deg, var(--primary-light), rgba(143, 214, 148, 0.3));
-}
-
-.card-header {
+.event-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  font-size: 0.55rem;
+  color: var(--text-secondary);
+  gap: 0.25rem;
 }
 
-.card-icon {
-  width: 14px;
-  height: 14px;
+.event-xp {
   color: var(--primary-color);
+  font-weight: 600;
 }
 
-.card-xp {
-  font-size: 0.625rem;
-  font-weight: 600;
-  color: var(--primary-color);
-}
-
-.card-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-  white-space: nowrap;
+.event-category {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.progress-bar {
-  width: 100%;
-  height: 4px;
-  background-color: var(--border-color);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
+.event-status-badge {
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: white;
   background-color: var(--primary-color);
-  transition: width 0.3s ease;
 }
 
-/* 아이콘 보기 스타일 */
-.icon-quests {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  align-content: start;
+/* Icon View */
+.event-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  align-items: center;
 }
 
-.quest-icon-item {
-  position: relative;
+.event-icon-badge {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background-color: var(--card-background);
-  border-radius: 8px;
-  border: 2px solid var(--border-color);
-  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.quest-icon-item:hover {
-  transform: scale(1.1);
-}
-
-.quest-icon-svg {
-  width: 16px;
-  height: 16px;
-  color: var(--text-primary);
-}
-
-.icon-status {
-  position: absolute;
-  top: -2px;
-  right: -2px;
+.event-icon-badge .event-icon {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
-  border: 1px solid white;
+  color: white;
 }
 
-.icon-status.status-completed {
-  background-color: #22c55e;
+.event-more-icon {
+  font-size: 0.5rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  min-width: 16px;
+  text-align: center;
 }
 
-.icon-status.status-in-progress {
-  background-color: var(--primary-color);
+/* Icon View Status Summary */
+.icon-status-summary {
+  margin-top: 2px;
+  font-size: 0.45rem;
 }
 
-.icon-status.status-pending {
-  background-color: #6b7280;
-}
-
-/* 타임라인 보기 스타일 */
-.timeline-quests {
-  flex: 1;
+.status-counts {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   gap: 3px;
+  flex-wrap: wrap;
 }
 
-.timeline-quest {
+.status-count {
+  font-weight: 600;
+  padding: 1px 2px;
+  border-radius: 2px;
+  color: white;
+}
+
+.status-count.completed {
+  background-color: var(--success-color);
+}
+
+.status-count.expired {
+  background-color: #8b5cf6;
+}
+
+/* Timeline View */
+.event-timeline {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  background-color: var(--card-background);
+  gap: 0.25rem;
+  padding: 0.125rem;
+  margin-bottom: 1px;
 }
 
-.timeline-quest.start {
-  border-left: 3px solid #22c55e;
-}
-
-.timeline-quest.end {
-  border-left: 3px solid #ef4444;
-}
-
-.timeline-marker {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.timeline-bar {
+  width: 3px;
+  height: 12px;
+  border-radius: 1.5px;
   flex-shrink: 0;
 }
 
-.timeline-quest.start .timeline-marker {
-  background-color: #22c55e;
-}
-
-.timeline-quest.end .timeline-marker {
-  background-color: #ef4444;
+.timeline-icon {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
 }
 
 .timeline-title {
-  font-size: 0.7rem;
+  flex: 1;
+  font-size: 0.6rem;
   font-weight: 500;
   color: var(--text-primary);
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* 기본 점 보기 스타일 */
-.event-indicators {
+.timeline-status {
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* Dot View */
+.event-dots {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  margin-top: auto;
-  padding-top: 0.25rem;
+  justify-content: center;
+  align-items: center;
+  padding: 0.25rem;
 }
 
 .event-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.event-pending {
-  background-color: #6b7280;
-}
-
-.event-in-progress {
-  background-color: var(--primary-color);
-  animation: dotPulse 2s ease-in-out infinite;
-}
-
-.event-completed {
-  background-color: #22c55e;
-}
-
-.more-events,
-.more-cards,
-.more-icons {
-  font-size: 0.625rem;
+.event-more-dot {
+  font-size: 0.5rem;
   color: var(--text-secondary);
   font-weight: 600;
-  background-color: var(--card-background);
-  padding: 2px 4px;
-  border-radius: 4px;
-  text-align: center;
+  margin-left: 2px;
+}
+
+/* Dot View Status Legend */
+.dot-status-legend {
   margin-top: 2px;
+  font-size: 0.45rem;
 }
 
-/* 애니메이션 */
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+.status-dots-summary {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  flex-wrap: wrap;
 }
 
-@keyframes dotPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.8;
-  }
+.dot-summary {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
-/* 반응형 디자인 */
-@media (max-width: 768px) {
+.dot-mini {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-mini.status-completed {
+  background-color: var(--success-color);
+}
+
+.dot-mini.status-expired {
+  background-color: #8b5cf6;
+}
+
+/* Status Colors */
+.status-pending {
+  background-color: var(--text-secondary);
+}
+
+.status-in-progress {
+  background-color: var(--primary-color);
+}
+
+.status-completed {
+  background-color: var(--success-color);
+}
+
+.status-failed,
+.status-expired {
+  background-color: #8b5cf6;
+}
+
+/* Large Desktop */
+@media (min-width: 1440px) {
+  .calendar-container {
+    max-width: 1000px;
+    padding: 2rem;
+  }
+
   .calendar-day {
-    min-height: 100px;
-    padding: 0.5rem 0.25rem;
+    min-height: 110px;
+    padding: 0.75rem 0.5rem;
   }
 
-  .deadline-quest {
-    padding: 4px;
-    gap: 4px;
+  .day-number {
+    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
   }
 
-  .quest-title-short {
+  .events-container {
+    gap: 3px;
+  }
+
+  .event-deadline {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.75rem;
+  }
+
+  .event-deadline .event-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .event-card {
+    padding: 0.4rem;
     font-size: 0.7rem;
   }
 
-  .quest-xp {
-    font-size: 0.6rem;
+  .event-icon-badge {
+    width: 18px;
+    height: 18px;
+  }
+
+  .event-icon-badge .event-icon {
+    width: 10px;
+    height: 10px;
+  }
+
+  .timeline-title {
+    font-size: 0.7rem;
+  }
+
+  .calendar-title {
+    font-size: 2.25rem;
+  }
+
+  .month-text {
+    font-size: 1.875rem;
   }
 }
 
-@media (max-width: 480px) {
+/* Desktop */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .calendar-container {
+    max-width: 900px;
+    padding: 1.75rem;
+  }
+
+  .calendar-day {
+    min-height: 95px;
+    padding: 0.5rem 0.375rem;
+  }
+
+  .day-number {
+    font-size: 1rem;
+  }
+}
+
+/* Tablet Landscape */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .calendar-container {
+    max-width: 750px;
+    padding: 1.5rem 1.25rem;
+  }
+
+  .calendar-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .calendar-title {
+    font-size: 1.875rem;
+  }
+
+  .star-icon {
+    font-size: 1.375rem;
+  }
+
+  .calendar-nav {
+    margin-bottom: 1.25rem;
+  }
+
+  .month-text {
+    font-size: 1.5rem;
+  }
+
   .calendar-day {
     min-height: 80px;
+    padding: 0.425rem 0.3rem;
+  }
+
+  .day-number {
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .event-deadline {
+    padding: 0.25rem 0.3rem;
+    font-size: 0.65rem;
+  }
+
+  .event-deadline .event-icon {
+    width: 9px;
+    height: 9px;
+  }
+
+  .event-card {
+    padding: 0.3rem;
+    font-size: 0.6rem;
+  }
+
+  .event-icon-badge {
+    width: 14px;
+    height: 14px;
+  }
+
+  .event-icon-badge .event-icon {
+    width: 8px;
+    height: 8px;
+  }
+
+  .timeline-title {
+    font-size: 0.6rem;
+  }
+
+  .event-title {
+    margin-bottom: 0.125rem;
+  }
+
+  .nav-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+/* Tablet Portrait */
+@media (min-width: 481px) and (max-width: 767px) {
+  .calendar-container {
+    padding: 1.25rem 0.875rem;
+  }
+
+  .calendar-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .calendar-title {
+    font-size: 1.75rem;
+  }
+
+  .star-icon {
+    font-size: 1.25rem;
+  }
+
+  .calendar-nav {
+    margin-bottom: 1rem;
+  }
+
+  .month-text {
+    font-size: 1.375rem;
+  }
+
+  .calendar-day {
+    min-height: 70px;
+    padding: 0.375rem 0.25rem;
+    border-radius: 0.5rem;
+  }
+
+  .day-number {
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .event-info {
+    font-size: 0.6rem;
+  }
+
+  .event-title {
+    margin-bottom: 0.125rem;
+  }
+
+  .event-time {
+    font-size: 0.55rem;
+  }
+
+  .day-header {
+    font-size: 0.75rem;
+    padding: 0.3rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .calendar-container {
+    padding: 1rem 0.75rem;
+    max-width: 100%;
+  }
+
+  .calendar-header {
+    margin-bottom: 1rem;
+    gap: 0.5rem;
+  }
+
+  .calendar-title {
+    font-size: 1.5rem;
+    letter-spacing: 0.1em;
+  }
+
+  .star-icon {
+    font-size: 1.125rem;
+  }
+
+  .calendar-nav {
+    margin-bottom: 0.875rem;
+  }
+
+  .month-text {
+    font-size: 1.25rem;
+  }
+
+  .day-headers {
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .day-header {
+    font-size: 0.7rem;
     padding: 0.25rem;
+    font-weight: 600;
   }
 
-  .deadline-quest {
-    padding: 3px;
+  .calendar-days {
+    gap: 0.25rem;
   }
 
-  .quest-icon {
-    width: 16px;
-    height: 16px;
+  .calendar-day {
+    min-height: 55px;
+    padding: 0.3rem 0.2rem;
+    border-radius: 0.5rem;
+    justify-content: space-between;
   }
 
-  .category-icon {
+  .day-number {
+    font-size: 0.75rem;
+    margin-bottom: 0.125rem;
+    text-align: center;
+    align-self: center;
+  }
+
+  .event-deadline {
+    padding: 0.2rem 0.25rem;
+    font-size: 0.55rem;
+  }
+
+  .event-deadline .event-icon {
+    width: 8px;
+    height: 8px;
+  }
+
+  .event-card {
+    padding: 0.25rem;
+    font-size: 0.5rem;
+  }
+
+  .event-icon-badge {
+    width: 12px;
+    height: 12px;
+  }
+
+  .event-icon-badge .event-icon {
+    width: 6px;
+    height: 6px;
+  }
+
+  .timeline-title {
+    font-size: 0.5rem;
+  }
+
+  .event-more {
+    font-size: 0.45rem;
+  }
+
+  .nav-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .calendar-container {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .calendar-title {
+    font-size: 1.25rem;
+  }
+
+  .month-text {
+    font-size: 1.125rem;
+  }
+
+  .calendar-day {
+    min-height: 45px;
+    padding: 0.25rem 0.15rem;
+  }
+
+  .day-number {
+    font-size: 0.7rem;
+  }
+
+  .event-deadline {
+    padding: 0.15rem 0.2rem;
+    font-size: 0.45rem;
+  }
+
+  .event-deadline .event-icon {
+    width: 6px;
+    height: 6px;
+  }
+
+  .event-card {
+    padding: 0.2rem;
+    font-size: 0.4rem;
+  }
+
+  .event-icon-badge {
     width: 10px;
     height: 10px;
+  }
+
+  .event-icon-badge .event-icon {
+    width: 5px;
+    height: 5px;
+  }
+
+  .event-time {
+    display: none;
+  }
+
+  .day-header {
+    font-size: 0.65rem;
+    padding: 0.125rem;
   }
 }
 </style>

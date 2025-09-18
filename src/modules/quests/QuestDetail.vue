@@ -37,9 +37,16 @@
             <div
               v-for="(objective, index) in quest.objectives"
               :key="index"
-              :class="['objective-item', { completed: objective.completed }]"
+              :class="['objective-item', {
+                completed: objective.completed,
+                disabled: isExpiredQuest
+              }]"
             >
-              <div class="objective-checkbox" @click="toggleObjective(index)">
+              <div
+                class="objective-checkbox"
+                :class="{ disabled: isExpiredQuest }"
+                @click="!isExpiredQuest ? toggleObjective(index) : null"
+              >
                 <CheckCircle v-if="objective.completed" class="icon completed" />
                 <Circle v-else class="icon" />
               </div>
@@ -107,8 +114,18 @@
             완료됨
           </base-button>
 
-          <base-button variant="secondary" block @click="editQuest" class="edit-button">
-            퀘스트 수정
+          <base-button v-else-if="isExpiredQuest" variant="secondary" block disabled>
+            마감됨
+          </base-button>
+
+          <base-button
+            variant="secondary"
+            block
+            @click="editQuest"
+            class="edit-button"
+            :disabled="isExpiredQuest"
+          >
+            {{ isExpiredQuest ? '수정 불가' : '퀘스트 수정' }}
           </base-button>
 
           <base-button
@@ -117,8 +134,9 @@
             block
             @click="deleteQuest"
             class="delete-button"
+            :disabled="isExpiredQuest"
           >
-            퀘스트 삭제
+            {{ isExpiredQuest ? '삭제 불가' : '퀘스트 삭제' }}
           </base-button>
         </div>
       </div>
@@ -200,12 +218,16 @@ const canComplete = computed(() => {
   return quest.value?.objectives.every((obj) => obj.completed)
 })
 
+const isExpiredQuest = computed(() => {
+  return quest.value?.status === 'expired' || quest.value?.status === 'failed'
+})
+
 const goBack = () => {
   router.go(-1)
 }
 
 const toggleObjective = async (index) => {
-  if (quest.value.status === 'completed') return
+  if (quest.value.status === 'completed' || isExpiredQuest.value) return
 
   const newStatus = !quest.value.objectives[index].completed
   quest.value.objectives[index].completed = newStatus
@@ -252,6 +274,11 @@ const completeQuest = async () => {
 }
 
 const deleteQuest = async () => {
+  if (isExpiredQuest.value) {
+    alert('마감된 퀘스트는 삭제할 수 없습니다.')
+    return
+  }
+
   const confirmDelete = confirm('정말 이 퀘스트를 삭제하시겠습니까?')
   if (!confirmDelete) return
 
@@ -268,6 +295,10 @@ const deleteQuest = async () => {
 }
 
 const editQuest = () => {
+  if (isExpiredQuest.value) {
+    alert('마감된 퀘스트는 수정할 수 없습니다.')
+    return
+  }
   router.push(`/quest/${quest.value.id}/edit`)
 }
 
@@ -292,7 +323,8 @@ const getStatusText = (status) => {
     pending: '대기중',
     'in-progress': '진행중',
     completed: '완료',
-    failed: '실패',
+    failed: '마감됨',
+    expired: '마감됨',
   }
   return map[status] || '대기중'
 }
@@ -366,8 +398,9 @@ const formatDate = (date) => {
   background-color: var(--success-color, #22c55e);
 }
 
-.status-failed {
-  background-color: var(--error-color);
+.status-failed,
+.status-expired {
+  background-color: #8b5cf6;
 }
 
 .quest-content {
@@ -481,6 +514,19 @@ const formatDate = (date) => {
 
 .objective-checkbox {
   cursor: pointer;
+}
+
+.objective-checkbox.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.objective-item.disabled {
+  opacity: 0.6;
+}
+
+.objective-item.disabled:hover {
+  background-color: var(--background-color);
 }
 
 .objective-checkbox .icon {
