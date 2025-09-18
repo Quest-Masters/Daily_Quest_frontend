@@ -1,11 +1,5 @@
 <template>
   <div class="calendar-container">
-    <!-- Header -->
-    <div class="calendar-header">
-      <div class="star-icon">✦</div>
-      <h1 class="calendar-title">QUEST CALENDAR</h1>
-    </div>
-
     <!-- Navigation and Month Display -->
     <div class="calendar-nav">
       <button @click="previousMonth" class="nav-button">
@@ -47,61 +41,107 @@
           <div v-if="day.hasEvents" class="events-container">
             <!-- Deadline View -->
             <template v-if="viewMode === 'deadline'">
-              <div v-for="event in day.events.slice(0, 1)" :key="event.id" class="event-deadline">
-                <Clock class="event-icon" />
+              <div
+                v-for="event in day.events.slice(0, 2)"
+                :key="event.id"
+                :class="['event-deadline', `status-${event.status}`]"
+              >
+                <component :is="getStatusIcon(event.status)" class="event-icon" />
                 <span class="event-title">{{ event.title }}</span>
+                <span class="event-status-text">{{ getStatusText(event.status) }}</span>
               </div>
-              <div v-if="day.events.length > 1" class="event-more">
-                +{{ day.events.length - 1 }}개
+              <div v-if="day.events.length > 2" class="event-more">
+                +{{ day.events.length - 2 }}개
               </div>
             </template>
 
             <!-- Card View -->
             <template v-else-if="viewMode === 'card'">
-              <div v-for="event in day.events.slice(0, 1)" :key="event.id" class="event-card">
+              <div
+                v-for="event in day.events.slice(0, 2)"
+                :key="event.id"
+                :class="['event-card', `status-${event.status}`]"
+              >
                 <div class="event-card-header">
+                  <component :is="getStatusIcon(event.status)" class="card-status-icon" />
                   <span class="event-title">{{ event.title }}</span>
                   <div :class="['event-status', `status-${event.status}`]"></div>
                 </div>
                 <div class="event-meta">
                   <span class="event-xp">{{ event.xp }}XP</span>
                   <span class="event-category">{{ getCategoryText(event.category) }}</span>
+                  <span class="event-status-badge">{{ getStatusText(event.status) }}</span>
                 </div>
               </div>
-              <div v-if="day.events.length > 1" class="event-more">
-                +{{ day.events.length - 1 }}
+              <div v-if="day.events.length > 2" class="event-more">
+                +{{ day.events.length - 2 }}개
               </div>
             </template>
 
             <!-- Icon View -->
             <template v-else-if="viewMode === 'icon'">
               <div class="event-icons">
-                <div v-for="event in day.events.slice(0, 3)" :key="event.id" class="event-icon-badge" :class="`status-${event.status}`">
-                  <Target class="event-icon" />
+                <div
+                  v-for="event in day.events.slice(0, 4)"
+                  :key="event.id"
+                  :class="['event-icon-badge', `status-${event.status}`]"
+                  :title="`${event.title} - ${getStatusText(event.status)}`"
+                >
+                  <component :is="getStatusIcon(event.status)" class="event-icon" />
                 </div>
-                <div v-if="day.events.length > 3" class="event-more-icon">
-                  +{{ day.events.length - 3 }}
+                <div v-if="day.events.length > 4" class="event-more-icon">
+                  +{{ day.events.length - 4 }}
+                </div>
+              </div>
+              <div class="icon-status-summary">
+                <div class="status-counts">
+                  <span
+                    v-if="getStatusCount(day.events, 'completed')"
+                    class="status-count completed"
+                    >✓{{ getStatusCount(day.events, 'completed') }}</span
+                  >
+                  <span v-if="getExpiredCount(day.events)" class="status-count expired"
+                    >⏰{{ getExpiredCount(day.events) }}</span
+                  >
                 </div>
               </div>
             </template>
 
             <!-- Timeline View -->
             <template v-else-if="viewMode === 'timeline'">
-              <div v-for="event in day.events.slice(0, 2)" :key="event.id" class="event-timeline">
+              <div v-for="event in day.events.slice(0, 3)" :key="event.id" class="event-timeline">
                 <div :class="['timeline-bar', `status-${event.status}`]"></div>
+                <component :is="getStatusIcon(event.status)" class="timeline-icon" />
                 <span class="timeline-title">{{ event.title }}</span>
+                <span class="timeline-status">{{ getStatusText(event.status) }}</span>
               </div>
-              <div v-if="day.events.length > 2" class="event-more">
-                +{{ day.events.length - 2 }}
+              <div v-if="day.events.length > 3" class="event-more">
+                +{{ day.events.length - 3 }}개
               </div>
             </template>
 
             <!-- Dot View -->
             <template v-else-if="viewMode === 'dot'">
               <div class="event-dots">
-                <div v-for="event in day.events.slice(0, 4)" :key="event.id" :class="['event-dot', `status-${event.status}`]"></div>
-                <div v-if="day.events.length > 4" class="event-more-dot">
-                  +{{ day.events.length - 4 }}
+                <div
+                  v-for="event in day.events"
+                  :key="event.id"
+                  :class="['event-dot', `status-${event.status}`]"
+                  :title="`${event.title} - ${getStatusText(event.status)}`"
+                ></div>
+              </div>
+              <div class="dot-status-legend">
+                <div class="status-dots-summary">
+                  <span
+                    v-if="getStatusCount(day.events, 'completed')"
+                    class="dot-summary completed"
+                  >
+                    <span class="dot-mini status-completed"></span
+                    >{{ getStatusCount(day.events, 'completed') }}
+                  </span>
+                  <span v-if="getExpiredCount(day.events)" class="dot-summary expired">
+                    <span class="dot-mini status-expired"></span>{{ getExpiredCount(day.events) }}
+                  </span>
                 </div>
               </div>
             </template>
@@ -114,7 +154,15 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Clock, Target } from 'lucide-vue-next'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Target,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+} from 'lucide-vue-next'
 
 const props = defineProps({
   events: {
@@ -224,7 +272,8 @@ const getStatusText = (status) => {
     pending: '대기중',
     'in-progress': '진행중',
     completed: '완료',
-    failed: '실패',
+    failed: '마감됨', // failed도 마감됨으로 표시
+    expired: '마감됨',
   }
   return statusMap[status] || '대기중'
 }
@@ -240,6 +289,28 @@ const getCategoryText = (category) => {
   return categoryMap[category] || '기타'
 }
 
+// 상태별 아이콘 반환
+const getStatusIcon = (status) => {
+  const iconMap = {
+    pending: Clock,
+    'in-progress': Target,
+    completed: CheckCircle,
+    failed: AlertTriangle, // failed도 마감됨 아이콘으로
+    expired: AlertTriangle,
+  }
+  return iconMap[status] || Clock
+}
+
+// 상태별 카운트 반환
+const getStatusCount = (events, status) => {
+  return events.filter((event) => event.status === status).length
+}
+
+// 만료된 퀘스트 카운트 (failed + expired 합계)
+const getExpiredCount = (events) => {
+  return events.filter((event) => event.status === 'failed' || event.status === 'expired').length
+}
+
 watch([currentYear, currentMonth], () => {
   emit('month-changed', new Date(currentYear.value, currentMonth.value))
 })
@@ -253,28 +324,6 @@ watch([currentYear, currentMonth], () => {
   background-color: var(--background-color);
   min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-.calendar-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
-}
-
-.star-icon {
-  font-size: 1.5rem;
-  color: var(--accent-color);
-  transform: rotate(45deg);
-}
-
-.calendar-title {
-  font-size: 2rem;
-  font-weight: 400;
-  letter-spacing: 0.15em;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .calendar-nav {
@@ -425,10 +474,31 @@ watch([currentYear, currentMonth], () => {
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  margin-bottom: 2px;
+  transition: all 0.2s ease;
+}
+
+.event-deadline.status-pending {
+  background-color: var(--text-secondary);
+  color: white;
+}
+
+.event-deadline.status-in-progress {
   background-color: var(--primary-color);
   color: white;
-  border-radius: 4px;
-  font-size: 0.7rem;
+}
+
+.event-deadline.status-completed {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.event-deadline.status-failed,
+.event-deadline.status-expired {
+  background-color: #8b5cf6;
+  color: white;
 }
 
 .event-deadline .event-icon {
@@ -442,16 +512,44 @@ watch([currentYear, currentMonth], () => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
+  flex: 1;
+}
+
+.event-deadline .event-status-text {
+  font-size: 0.55rem;
+  opacity: 0.9;
+  font-weight: 600;
 }
 
 /* Card View */
 .event-card {
   padding: 0.375rem;
-  background-color: rgba(255, 255, 255, 0.95);
-  border: 1px solid var(--border-color);
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   font-size: 0.65rem;
+  margin-bottom: 2px;
+  border-left: 3px solid;
+}
+
+.event-card.status-pending {
+  background-color: rgba(107, 114, 128, 0.1);
+  border-left-color: var(--text-secondary);
+}
+
+.event-card.status-in-progress {
+  background-color: rgba(139, 195, 74, 0.1);
+  border-left-color: var(--primary-color);
+}
+
+.event-card.status-completed {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-left-color: var(--success-color);
+}
+
+.event-card.status-failed,
+.event-card.status-expired {
+  background-color: rgba(139, 92, 246, 0.1);
+  border-left-color: #8b5cf6;
 }
 
 .event-card-header {
@@ -460,6 +558,12 @@ watch([currentYear, currentMonth], () => {
   align-items: flex-start;
   margin-bottom: 0.25rem;
   gap: 0.25rem;
+}
+
+.card-status-icon {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
 }
 
 .event-card .event-title {
@@ -499,6 +603,15 @@ watch([currentYear, currentMonth], () => {
   white-space: nowrap;
 }
 
+.event-status-badge {
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: white;
+  background-color: var(--primary-color);
+}
+
 /* Icon View */
 .event-icons {
   display: flex;
@@ -532,12 +645,41 @@ watch([currentYear, currentMonth], () => {
   text-align: center;
 }
 
+/* Icon View Status Summary */
+.icon-status-summary {
+  margin-top: 2px;
+  font-size: 0.45rem;
+}
+
+.status-counts {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.status-count {
+  font-weight: 600;
+  padding: 1px 2px;
+  border-radius: 2px;
+  color: white;
+}
+
+.status-count.completed {
+  background-color: var(--success-color);
+}
+
+.status-count.expired {
+  background-color: #8b5cf6;
+}
+
 /* Timeline View */
 .event-timeline {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
   padding: 0.125rem;
+  margin-bottom: 1px;
 }
 
 .timeline-bar {
@@ -547,14 +689,27 @@ watch([currentYear, currentMonth], () => {
   flex-shrink: 0;
 }
 
+.timeline-icon {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+}
+
 .timeline-title {
   flex: 1;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 500;
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.timeline-status {
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
 /* Dot View */
@@ -581,6 +736,42 @@ watch([currentYear, currentMonth], () => {
   margin-left: 2px;
 }
 
+/* Dot View Status Legend */
+.dot-status-legend {
+  margin-top: 2px;
+  font-size: 0.45rem;
+}
+
+.status-dots-summary {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.dot-summary {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.dot-mini {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-mini.status-completed {
+  background-color: var(--success-color);
+}
+
+.dot-mini.status-expired {
+  background-color: #8b5cf6;
+}
+
 /* Status Colors */
 .status-pending {
   background-color: var(--text-secondary);
@@ -594,8 +785,9 @@ watch([currentYear, currentMonth], () => {
   background-color: var(--success-color);
 }
 
-.status-failed {
-  background-color: var(--error-color);
+.status-failed,
+.status-expired {
+  background-color: #8b5cf6;
 }
 
 /* Large Desktop */

@@ -80,6 +80,15 @@
       >
         재시도
       </base-button>
+
+      <base-button
+        v-else-if="quest.status === 'expired'"
+        variant="danger"
+        size="small"
+        disabled
+      >
+        마감됨
+      </base-button>
     </div>
   </div>
 </template>
@@ -124,6 +133,7 @@ const getStatusText = (status) => {
     'in-progress': '진행중',
     completed: '완료',
     failed: '실패',
+    expired: '마감됨',
   }
   return statusMap[status] || '대기중'
 }
@@ -201,6 +211,11 @@ const formatDueDate = (date) => {
   border-left-color: #ef4444;
 }
 
+.quest-item.status-expired {
+  border-left-color: #8b5cf6;
+  opacity: 0.8;
+}
+
 .quest-item.difficulty-easy::before {
   content: '';
   position: absolute;
@@ -270,6 +285,10 @@ const formatDueDate = (date) => {
 
 .status-indicator.status-failed {
   background-color: #ef4444;
+}
+
+.status-indicator.status-expired {
+  background-color: #8b5cf6;
 }
 
 .status-text {

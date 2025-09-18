@@ -1,7 +1,10 @@
 <template>
   <div class="quest-calendar-page">
     <div class="page-header">
-      <h1>퀘스트 캘린더</h1>
+      <div class="header-title">
+        <div class="star-icon">✦</div>
+        <h1>퀘스트 캘린더</h1>
+      </div>
       <p>모험의 여정을 기록하고 추적하세요</p>
     </div>
 
@@ -77,6 +80,7 @@ const statusLegend = ref([
   { key: 'pending', label: '대기중', class: 'status-pending' },
   { key: 'in-progress', label: '진행중', class: 'status-in-progress' },
   { key: 'completed', label: '완료', class: 'status-completed' },
+  { key: 'expired', label: '마감됨', class: 'status-expired' },
 ])
 
 const isValidDate = (d) => d instanceof Date && !isNaN(d.getTime())
@@ -118,13 +122,21 @@ const questEvents = computed(() => {
       )
       const localDueDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
 
+      // 퀘스트 타입 결정 - failed는 expired로 통합
+      let type = 'quest'
+      if (quest.status === 'completed') {
+        type = 'completed'
+      } else if (quest.status === 'failed' || quest.status === 'expired') {
+        type = 'expired'
+      }
+
       return {
         id: quest.id,
         title: quest.title,
         date: localStartDate.toISOString().split('T')[0],
         startDate: localStartDate.toISOString().split('T')[0],
         dueDate: localDueDate.toISOString().split('T')[0],
-        type: quest.status === 'completed' ? 'completed' : 'quest',
+        type: type,
         status: quest.status,
         category: quest.category,
         xp: quest.xp || 50,
@@ -191,13 +203,22 @@ const goToQuestDetail = (questId) => {
   margin-bottom: 1.5rem;
 }
 
+.header-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
 .page-header h1 {
   color: var(--primary-color);
-  margin-bottom: 0.5rem;
+  margin: 0;
 }
 
 .page-header p {
   color: var(--text-secondary);
+  margin: 0;
 }
 
 .calendar-controls {
@@ -326,6 +347,27 @@ const goToQuestDetail = (questId) => {
   transform: translate(-50%, -50%);
   color: white;
   font-size: 10px;
+  font-weight: bold;
+}
+.star-icon {
+  font-size: 1.5rem;
+  color: var(--accent-color);
+  transform: rotate(45deg);
+}
+
+.legend-indicator.status-expired {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  position: relative;
+}
+
+.legend-indicator.status-expired::after {
+  content: '⏰';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 8px;
   font-weight: bold;
 }
 
