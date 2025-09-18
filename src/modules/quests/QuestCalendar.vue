@@ -111,7 +111,11 @@ const questEvents = computed(() => {
       const dueDate = new Date(quest.dueDate)
 
       // 타임존 문제를 피하기 위해 로컬 날짜로 변환
-      const localStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
+      const localStartDate = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+      )
       const localDueDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
 
       return {
@@ -135,11 +139,18 @@ const selectedDateQuests = computed(() => {
 
   // 선택된 날짜를 YYYY-MM-DD 형식으로 변환 (타임존 문제 해결)
   const selectedDateObj = new Date(selectedDate.value)
-  const localSelectedDate = new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), selectedDateObj.getDate())
+  const localSelectedDate = new Date(
+    selectedDateObj.getFullYear(),
+    selectedDateObj.getMonth(),
+    selectedDateObj.getDate(),
+  )
   const selectedDateStr = localSelectedDate.toISOString().split('T')[0]
 
   console.log('선택된 날짜:', selectedDateStr)
-  console.log('퀘스트 목록:', questEvents.value.map(q => ({ title: q.title, dueDate: q.dueDate })))
+  console.log(
+    '퀘스트 목록:',
+    questEvents.value.map((q) => ({ title: q.title, dueDate: q.dueDate })),
+  )
 
   // 선택된 날짜가 마감일인 퀘스트만 필터링
   const filteredQuests = questEvents.value.filter((quest) => {
@@ -168,14 +179,16 @@ const goToQuestDetail = (questId) => {
 
 <style scoped>
 .quest-calendar-page {
-  max-width: 1200px;
+  max-width: 950px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
+  background-color: var(--background-color);
+  min-height: 100vh;
 }
 
 .page-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .page-header h1 {
@@ -188,13 +201,13 @@ const goToQuestDetail = (questId) => {
 }
 
 .calendar-controls {
-  background: linear-gradient(135deg, rgba(143, 214, 148, 0.1), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(135deg, rgba(139, 195, 74, 0.1), rgba(255, 255, 255, 0.05));
   backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  border: 1px solid rgba(143, 214, 148, 0.2);
-  box-shadow: 0 8px 32px rgba(143, 214, 148, 0.1);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--primary-light);
+  box-shadow: 0 6px 24px rgba(139, 195, 74, 0.08);
 }
 
 .view-controls {
@@ -225,7 +238,7 @@ const goToQuestDetail = (questId) => {
 
 .mode-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(143, 214, 148, 0.3);
+  box-shadow: 0 8px 25px rgba(139, 195, 74, 0.3);
   border-color: var(--primary-color);
 }
 
@@ -292,7 +305,7 @@ const goToQuestDetail = (questId) => {
 }
 
 .legend-indicator.status-pending {
-  background: linear-gradient(135deg, #6b7280, #9ca3af);
+  background: linear-gradient(135deg, var(--text-secondary), #9ca3af);
 }
 
 .legend-indicator.status-in-progress {
@@ -301,7 +314,7 @@ const goToQuestDetail = (questId) => {
 }
 
 .legend-indicator.status-completed {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
+  background: linear-gradient(135deg, var(--success-color), #16a34a);
   position: relative;
 }
 
@@ -337,76 +350,284 @@ const goToQuestDetail = (questId) => {
     transform: scale(1);
     box-shadow:
       0 2px 4px rgba(0, 0, 0, 0.2),
-      0 0 0 0 rgba(143, 214, 148, 0.7);
+      0 0 0 0 rgba(139, 195, 74, 0.7);
   }
   50% {
     transform: scale(1.1);
     box-shadow:
       0 4px 8px rgba(0, 0, 0, 0.3),
-      0 0 0 8px rgba(143, 214, 148, 0);
+      0 0 0 8px rgba(139, 195, 74, 0);
   }
 }
 
 @keyframes floatingGlow {
   0%,
   100% {
-    box-shadow: 0 8px 32px rgba(143, 214, 148, 0.1);
+    box-shadow: 0 8px 32px rgba(139, 195, 74, 0.1);
     transform: translateY(0px);
   }
   50% {
-    box-shadow: 0 12px 40px rgba(143, 214, 148, 0.2);
+    box-shadow: 0 12px 40px rgba(139, 195, 74, 0.2);
     transform: translateY(-2px);
   }
 }
 
-@media (max-width: 768px) {
+/* Large Desktop */
+@media (min-width: 1440px) {
+  .quest-calendar-page {
+    max-width: 1400px;
+    padding: 3rem 1.5rem;
+  }
+
+  .page-header h1 {
+    font-size: 3rem;
+  }
+
+  .page-header p {
+    font-size: 1.125rem;
+  }
+
   .calendar-controls {
-    padding: 1rem;
+    padding: 2rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .mode-button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .legend-item {
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .quest-calendar-page {
+    max-width: 1200px;
+    padding: 2.5rem 1.25rem;
+  }
+
+  .page-header h1 {
+    font-size: 2.5rem;
+  }
+
+  .calendar-controls {
+    padding: 1.75rem;
+    margin-bottom: 2.25rem;
+  }
+}
+
+/* Tablet Landscape */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .quest-calendar-page {
+    padding: 2rem 1rem;
+  }
+
+  .page-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .page-header h1 {
+    font-size: 2.25rem;
+  }
+
+  .page-header p {
+    font-size: 1rem;
+  }
+
+  .calendar-controls {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .view-controls {
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .mode-button {
+    padding: 0.6rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .button-icon {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
+  .legend {
+    gap: 1.5rem;
+    padding: 0.875rem;
+  }
+
+  .legend-item {
+    padding: 0.6rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Tablet Portrait */
+@media (min-width: 481px) and (max-width: 767px) {
+  .quest-calendar-page {
+    padding: 1.5rem 0.875rem;
+  }
+
+  .page-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+  }
+
+  .page-header p {
+    font-size: 0.9rem;
+  }
+
+  .calendar-controls {
+    padding: 1.25rem;
+    margin-bottom: 1.75rem;
   }
 
   .view-controls {
     flex-direction: column;
     gap: 1rem;
+    margin-bottom: 1rem;
   }
 
-  .view-toggle,
-  .theme-toggle {
+  .view-toggle {
     justify-content: center;
+    gap: 0.375rem;
+  }
+
+  .mode-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .button-icon {
+    width: 0.875rem;
+    height: 0.875rem;
   }
 
   .legend {
-    gap: 1rem;
-  }
-
-  .legend-item {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .calendar-controls {
+    gap: 1.25rem;
     padding: 0.75rem;
   }
 
-  .view-toggle,
-  .theme-toggle {
-    gap: 0.25rem;
+  .legend-item {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8rem;
   }
 
-  .mode-button,
-  .theme-button {
-    padding: 0.5rem;
+  .legend-indicator {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .quest-calendar-page {
+    padding: 1rem 0.75rem;
+  }
+
+  .page-header {
+    margin-bottom: 1rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .page-header p {
+    font-size: 0.85rem;
+  }
+
+  .calendar-controls {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+  }
+
+  .view-controls {
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 0.875rem;
+  }
+
+  .view-toggle {
+    gap: 0.25rem;
+    padding: 0.375rem;
+    border-radius: 8px;
+  }
+
+  .mode-button {
+    padding: 0.5rem 0.75rem;
     font-size: 0.75rem;
+    border-radius: 6px;
+  }
+
+  .button-icon {
+    width: 0.75rem;
+    height: 0.75rem;
   }
 
   .legend {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.625rem;
+    padding: 0.625rem;
+    border-radius: 8px;
   }
 
   .legend-item {
     justify-content: center;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    border-radius: 6px;
+  }
+
+  .legend-indicator {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .quest-calendar-page {
+    padding: 0.875rem 0.5rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .page-header p {
+    font-size: 0.8rem;
+  }
+
+  .calendar-controls {
+    padding: 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .mode-button {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.7rem;
+  }
+
+  .legend-item {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+  }
+
+  .legend-indicator {
+    width: 10px;
+    height: 10px;
   }
 }
 </style>
