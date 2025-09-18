@@ -21,8 +21,10 @@
           <div
             v-for="quest in quests"
             :key="quest.id"
-            :class="['quest-item-modal', `status-${quest.status}`]"
-            @click="selectQuest(quest.id)"
+            :class="['quest-item-modal', `status-${quest.status}`, {
+              'disabled': quest.status === 'expired' || quest.status === 'failed'
+            }]"
+            @click="canInteractWithQuest(quest) ? selectQuest(quest.id) : null"
           >
             <div class="quest-header">
               <div class="quest-status">
@@ -56,12 +58,13 @@
 
             <div class="quest-actions">
               <base-button
-                variant="secondary"
+                :variant="canInteractWithQuest(quest) ? 'secondary' : 'disabled'"
                 size="small"
-                @click.stop="selectQuest(quest.id)"
+                :disabled="!canInteractWithQuest(quest)"
+                @click.stop="canInteractWithQuest(quest) ? selectQuest(quest.id) : null"
               >
                 <ExternalLink class="action-icon" />
-                상세보기
+                {{ canInteractWithQuest(quest) ? '상세보기' : '마감됨' }}
               </base-button>
             </div>
           </div>
@@ -81,6 +84,10 @@
           <div class="summary-item">
             <span class="summary-label">진행중</span>
             <span class="summary-value in-progress">{{ inProgressQuests }}개</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">마감됨</span>
+            <span class="summary-value expired">{{ expiredQuests }}개</span>
           </div>
           <div class="summary-item">
             <span class="summary-label">총 XP</span>
@@ -122,6 +129,10 @@ const selectQuest = (questId) => {
   emit('quest-selected', questId)
 }
 
+const canInteractWithQuest = (quest) => {
+  return quest.status !== 'expired' && quest.status !== 'failed'
+}
+
 const formatDate = (date) => {
   if (!date) return ''
 
@@ -150,7 +161,8 @@ const getStatusText = (status) => {
     pending: '대기중',
     'in-progress': '진행중',
     completed: '완료',
-    failed: '실패'
+    failed: '마감됨',
+    expired: '마감됨'
   }
   return statusMap[status] || '대기중'
 }
@@ -181,6 +193,10 @@ const completedQuests = computed(() => {
 
 const inProgressQuests = computed(() => {
   return props.quests.filter(quest => quest.status === 'in-progress').length
+})
+
+const expiredQuests = computed(() => {
+  return props.quests.filter(quest => quest.status === 'expired' || quest.status === 'failed').length
 })
 
 const totalXP = computed(() => {
@@ -337,8 +353,20 @@ const totalXP = computed(() => {
   border-left-color: var(--success-color);
 }
 
-.quest-item-modal.status-failed {
-  border-left-color: var(--error-color);
+.quest-item-modal.status-failed,
+.quest-item-modal.status-expired {
+  border-left-color: #8b5cf6;
+}
+
+.quest-item-modal.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.quest-item-modal.disabled:hover {
+  transform: none;
+  box-shadow: none;
+  background-color: var(--background-color);
 }
 
 .quest-header {
@@ -372,8 +400,9 @@ const totalXP = computed(() => {
   background-color: var(--success-color);
 }
 
-.status-indicator.status-failed {
-  background-color: var(--error-color);
+.status-indicator.status-failed,
+.status-indicator.status-expired {
+  background-color: #8b5cf6;
 }
 
 .status-text {
@@ -509,6 +538,10 @@ const totalXP = computed(() => {
 
 .summary-value.xp {
   color: var(--accent-color);
+}
+
+.summary-value.expired {
+  color: #8b5cf6;
 }
 
 @media (max-width: 768px) {
