@@ -112,6 +112,7 @@ import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 import QuestItem from './QuestItem.vue'
 import QuestCreateModal from './AiQuestGenerator.vue'
 import { useQuestStore } from './quest-store.js'
+import { getAccessToken } from '@/utils/cookie-utils'
 
 const router = useRouter()
 const showCreateModal = ref(false)
@@ -130,7 +131,7 @@ const fetchQuests = async () => {
   try {
     const res = await axios.get('/api/quests/list', {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${getAccessToken()}`,
       },
     })
 
@@ -179,7 +180,7 @@ const updateQuestStatus = async (questId, status) => {
       { status },
       {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${getAccessToken()}`,
         },
       }
     )

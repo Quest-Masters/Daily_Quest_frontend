@@ -89,6 +89,7 @@ import axios from 'axios'
 import { User } from 'lucide-vue-next'
 import BaseInput from '@/components/BaseSetting/BaseInput.vue'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
+import { getAccessToken } from '@/utils/cookie-utils'
 
 const userProfile = reactive({
   id: '',
@@ -125,7 +126,7 @@ const fetchProfile = async () => {
   try {
     const res = await axios.get('/api/profile', {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        Authorization: `Bearer ${getAccessToken()}`,
       },
     })
 

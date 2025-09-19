@@ -1,5 +1,6 @@
 // src/plugins/axios.js
 import axios from 'axios'
+import { getAccessToken } from '@/utils/cookie-utils'
 
 axios.defaults.baseURL = 'http://localhost:8080'
 axios.defaults.headers.common['Content-Type'] = 'application/json'
@@ -7,7 +8,7 @@ axios.defaults.withCredentials = true // httpOnly 쿠키 사용을 위해 모든
 
 // Request interceptor - 토큰 자동 추가
 axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
+  const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }

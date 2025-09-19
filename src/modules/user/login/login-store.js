@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import axios from 'axios'
+import { setAccessToken, removeAccessToken, getAccessToken, getTokenExpiry, isTokenExpired } from '@/utils/cookie-utils'
 
 export const useUserLoginStore = defineStore('userLogin', () => {
   const isLoggedIn = ref(false)
@@ -28,9 +29,8 @@ export const useUserLoginStore = defineStore('userLogin', () => {
         const expireTime = new Date(Date.now() + 1000 * 60 * 30)
         expiresAt.value = expireTime.toISOString()
 
-        // access token만 로컬 스토리지에 저장 (refresh token은 httpOnly 쿠키로 처리)
-        localStorage.setItem('access_token', data.token)
-        localStorage.setItem('expires_at', expiresAt.value)
+        // access token을 쿠키에 저장 (refresh token은 httpOnly 쿠키로 처리)
+        setAccessToken(data.token, Date.now() + 1000 * 60 * 30)
         return true
       } else {
         errorMessage.value = data.message || '로그인 실패'
@@ -61,24 +61,20 @@ export const useUserLoginStore = defineStore('userLogin', () => {
       token.value = ''
       expiresAt.value = null
 
-      // access token만 로컬 스토리지에서 제거 (refresh token은 서버에서 쿠키 제거)
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('expires_at')
+      // access token 쿠키 제거 (refresh token은 서버에서 쿠키 제거)
+      removeAccessToken()
     }
   }
 
   const restoreSession = () => {
-    const storedToken = localStorage.getItem('access_token')
-    const storedExpiresAt = localStorage.getItem('expires_at')
+    const storedToken = getAccessToken()
+    const storedExpiresAt = getTokenExpiry()
 
     if (storedToken && storedExpiresAt) {
-      const now = new Date()
-      const expire = new Date(storedExpiresAt)
-
       token.value = storedToken
-      expiresAt.value = storedExpiresAt
+      expiresAt.value = new Date(parseInt(storedExpiresAt)).toISOString()
 
-      if (now < expire) {
+      if (!isTokenExpired()) {
         isLoggedIn.value = true
       } else {
         // 토큰이 만료되었다면 refresh 토큰으로 자동 갱신 시도
@@ -111,8 +107,7 @@ export const useUserLoginStore = defineStore('userLogin', () => {
         const expireTime = new Date(Date.now() + 1000 * 60 * 30)
         expiresAt.value = expireTime.toISOString()
 
-        localStorage.setItem('access_token', data.token)
-        localStorage.setItem('expires_at', expiresAt.value)
+        setAccessToken(data.token, Date.now() + 1000 * 60 * 30)
 
         isLoggedIn.value = true
         return true
@@ -146,8 +141,7 @@ export const useUserLoginStore = defineStore('userLogin', () => {
         const expireTime = new Date(Date.now() + 1000 * 60 * 30)
         expiresAt.value = expireTime.toISOString()
 
-        localStorage.setItem('access_token', data.token)
-        localStorage.setItem('expires_at', expiresAt.value)
+        setAccessToken(data.token, Date.now() + 1000 * 60 * 30)
         isLoggedIn.value = true
         return true
       } else {

@@ -7,6 +7,7 @@ import FindPassword from '@/modules/user/auth/FindPassword.vue'
 import NotFound from '@/components/NotFound.vue'
 import Forbidden from '@/components/Forbidden.vue'
 import ServerError from '@/components/ServerError.vue'
+import { getAccessToken } from '@/utils/cookie-utils'
 // import QuestCalendar from '@/modules/calendar/views/QuestCalendar.vue'
 // import QuestDetail from '@/modules/calendar/views/QuestDetail.vue'
 // import QuestBoard from '@/modules/board/views/QuestBoard.vue'
@@ -109,7 +110,7 @@ router.beforeEach(async (to, from, next) => {
   // 404 페이지 처리 - 존재하지 않는 라우트인지 확인
   if (to.name === 'NotFound') {
     // 토큰이 있다면 세션 복원 시도
-    const token = localStorage.getItem('access_token')
+    const token = getAccessToken()
     if (token) {
       loginStore.restoreSession()
     }
@@ -128,7 +129,7 @@ router.beforeEach(async (to, from, next) => {
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     if (!loginStore.isLoggedIn) {
       // 토큰이 있다면 세션 복원 시도
-      const token = localStorage.getItem('access_token')
+      const token = getAccessToken()
       if (token) {
         loginStore.restoreSession()
       }
