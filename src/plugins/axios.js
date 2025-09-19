@@ -3,6 +3,7 @@ import axios from 'axios'
 
 axios.defaults.baseURL = 'http://localhost:8080'
 axios.defaults.headers.common['Content-Type'] = 'application/json'
+axios.defaults.withCredentials = true // httpOnly 쿠키 사용을 위해 모든 요청에 포함
 
 // Request interceptor - 토큰 자동 추가
 axios.interceptors.request.use((config) => {
