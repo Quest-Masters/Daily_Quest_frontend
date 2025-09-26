@@ -26,11 +26,11 @@ export const useUserLoginStore = defineStore('userLogin', () => {
         currentUser.value = data.user
         token.value = data.token
 
-        const expireTime = new Date(Date.now() + 1000 * 60 * 30)
+        const expireTime = new Date(Date.now() + 1000 * 60 * 2) // 2분으로 단축 (테스트용)
         expiresAt.value = expireTime.toISOString()
 
-        // access token을 쿠키에 저장 (refresh token은 httpOnly 쿠키로 처리)
-        setAccessToken(data.token, Date.now() + 1000 * 60 * 30)
+        // access token만 쿠키에 저장 (refresh token은 서버에서 HttpOnly 쿠키로 설정)
+        setAccessToken(data.token, Date.now() + 1000 * 60 * 2) // 2분
         return true
       } else {
         errorMessage.value = data.message || '로그인 실패'
@@ -61,12 +61,12 @@ export const useUserLoginStore = defineStore('userLogin', () => {
       token.value = ''
       expiresAt.value = null
 
-      // access token 쿠키 제거 (refresh token은 서버에서 쿠키 제거)
+      // access token 쿠키 제거 (refresh token은 서버에서 HttpOnly 쿠키 제거)
       removeAccessToken()
     }
   }
 
-  const restoreSession = () => {
+  const restoreSession = async () => {
     const storedToken = getAccessToken()
     const storedExpiresAt = getTokenExpiry()
 
@@ -76,10 +76,19 @@ export const useUserLoginStore = defineStore('userLogin', () => {
 
       if (!isTokenExpired()) {
         isLoggedIn.value = true
+        console.log('✅ 세션 복원 성공: 토큰이 유효함')
       } else {
+        console.log('⏰ 토큰이 만료됨, refresh 토큰으로 갱신 시도...')
         // 토큰이 만료되었다면 refresh 토큰으로 자동 갱신 시도
-        refreshAccessToken()
+        const refreshSuccess = await refreshAccessToken()
+        if (refreshSuccess) {
+          console.log('✅ 토큰 갱신 성공: 세션 복원 완료')
+        } else {
+          console.log('❌ 토큰 갱신 실패: 로그아웃 처리')
+        }
       }
+    } else {
+      console.log('❌ 저장된 토큰이 없음: 로그인 필요')
     }
   }
 
@@ -96,7 +105,7 @@ export const useUserLoginStore = defineStore('userLogin', () => {
         '/api/users/refresh',
         {},
         {
-          withCredentials: true, // httpOnly 쿠키의 refresh token 사용
+          withCredentials: true, // HttpOnly 쿠키의 refresh token 자동 전송
         },
       )
 
@@ -104,10 +113,10 @@ export const useUserLoginStore = defineStore('userLogin', () => {
       if (data.success) {
         token.value = data.token
 
-        const expireTime = new Date(Date.now() + 1000 * 60 * 30)
+        const expireTime = new Date(Date.now() + 1000 * 60 * 2) // 2분으로 단축 (테스트용)
         expiresAt.value = expireTime.toISOString()
 
-        setAccessToken(data.token, Date.now() + 1000 * 60 * 30)
+        setAccessToken(data.token, Date.now() + 1000 * 60 * 2) // 2분
 
         isLoggedIn.value = true
         return true
@@ -131,17 +140,17 @@ export const useUserLoginStore = defineStore('userLogin', () => {
         '/api/users/refresh',
         {},
         {
-          withCredentials: true, // httpOnly 쿠키의 refresh token 사용
+          withCredentials: true, // HttpOnly 쿠키의 refresh token 자동 전송
         },
       )
       const data = response.data
       if (data.success) {
         token.value = data.token
 
-        const expireTime = new Date(Date.now() + 1000 * 60 * 30)
+        const expireTime = new Date(Date.now() + 1000 * 60 * 2) // 2분으로 단축 (테스트용)
         expiresAt.value = expireTime.toISOString()
 
-        setAccessToken(data.token, Date.now() + 1000 * 60 * 30)
+        setAccessToken(data.token, Date.now() + 1000 * 60 * 2) // 2분
         isLoggedIn.value = true
         return true
       } else {

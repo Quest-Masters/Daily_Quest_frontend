@@ -6,17 +6,18 @@ export const getCookie = (name) => {
 }
 
 export const setCookie = (name, value, days = 7) => {
-  let expires = ""
+  let expires = ''
   if (days) {
     const date = new Date()
-    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000))
-    expires = "; expires=" + date.toUTCString()
+    date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000)
+    expires = '; expires=' + date.toUTCString()
   }
-  document.cookie = name + "=" + (value || "") + expires + "; path=/; Secure; SameSite=Strict"
+  document.cookie = name + '=' + (value || '') + expires + '; path=/; Secure; SameSite=Strict'
 }
 
 export const deleteCookie = (name) => {
-  document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Secure; SameSite=Strict'
+  document.cookie =
+    name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Secure; SameSite=Strict'
 }
 
 export const getAccessToken = () => {

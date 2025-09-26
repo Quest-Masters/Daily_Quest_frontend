@@ -26,13 +26,17 @@ import { useUserLoginStore } from '@/modules/user/login/login-store.js'
 import { setupTokenRefreshTimer } from '@/utils/token-utils.js'
 
 const loginStore = useUserLoginStore()
-loginStore.restoreSession()
 
-// 자동 토큰 갱신 타이머 설정
-setupTokenRefreshTimer(loginStore)
+// 비동기 세션 복원
+;(async () => {
+  await loginStore.restoreSession()
 
-// 개발 환경에서 토큰 상태 로깅
-logTokenStatus()
+  // 자동 토큰 갱신 타이머 설정
+  setupTokenRefreshTimer(loginStore)
+
+  // 개발 환경에서 토큰 상태 로깅
+  logTokenStatus()
+})()
 
 // ✅ 최종 mount
 app.mount('#app')

@@ -111,10 +111,10 @@ router.beforeEach(async (to, from, next) => {
   if (to.name === 'NotFound') {
     // 토큰이 있다면 세션 복원 시도
     const token = getAccessToken()
-    if (token) {
-      loginStore.restoreSession()
+    if (token && !loginStore.isLoggedIn) {
+      await loginStore.restoreSession()
     }
-    
+
     if (!loginStore.isLoggedIn) {
       // 미인증 사용자는 로그인 페이지로
       next({ name: 'Login' })
@@ -131,9 +131,9 @@ router.beforeEach(async (to, from, next) => {
       // 토큰이 있다면 세션 복원 시도
       const token = getAccessToken()
       if (token) {
-        loginStore.restoreSession()
+        await loginStore.restoreSession()
       }
-      
+
       // 여전히 로그인되지 않았다면 Forbidden 페이지로
       if (!loginStore.isLoggedIn) {
         next({ name: 'Forbidden' })
