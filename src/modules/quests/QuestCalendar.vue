@@ -61,6 +61,7 @@ import Calendar from './Calendar.vue'
 import QuestListModal from './QuestListModal.vue'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 import axios from 'axios'
+import { getAccessToken } from '@/utils/cookie-utils'
 
 const router = useRouter()
 const selectedDate = ref(new Date())
@@ -89,7 +90,7 @@ onMounted(async () => {
   try {
     const res = await axios.get('/api/quests/list', {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${getAccessToken()}`,
       },
     })
 

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import axios from 'axios'
 
 export const useQuestStore = defineStore('quest', () => {
