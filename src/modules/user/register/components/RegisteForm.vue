@@ -155,14 +155,15 @@ const handleSubmit = async () => {
     <div class="form-group">
       <label for="id" class="form-label">아이디</label>
       <div class="input-with-button">
-        <input
-          id="id"
-          v-model="form.id"
-          type="text"
-          placeholder="아이디를 입력하세요."
-          class="form-input"
-          required
-        />
+        <div class="input-wrapper">
+          <base-input
+            id="id"
+            v-model="form.id"
+            type="text"
+            placeholder="아이디를 입력하세요"
+            required
+          />
+        </div>
         <BaseButton type="button" @click="checkDuplicateId" variant="secondary">확인</BaseButton>
       </div>
       <p v-if="errors.id" class="error-message">{{ errors.id }}</p>
@@ -322,19 +323,23 @@ const handleSubmit = async () => {
 }
 
 .form-input {
-  width: 100%;
+  width: 94%;
   padding: 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  background-color: var(--search-input-background-color);
+  background-color: var(--card-color);
   color: var(--text-primary);
-  font-size: 1rem;
+  transition: border-color 0.2s ease;
 }
 
 .form-input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.form-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .phone-input-group {
@@ -363,5 +368,22 @@ const handleSubmit = async () => {
 .input-with-button {
   display: flex;
   gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.input-with-button .input-wrapper {
+  flex: 1;
+}
+
+.input-with-button .input-wrapper :deep(.form-group) {
+  margin-bottom: 0;
+}
+
+.input-with-button :deep(button) {
+  white-space: nowrap;
+  min-width: fit-content;
+  padding: 0.75rem 1rem;
+  flex-shrink: 0;
+  margin-top: 0;
 }
 </style>
