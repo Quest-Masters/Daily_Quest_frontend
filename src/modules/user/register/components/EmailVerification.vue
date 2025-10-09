@@ -52,25 +52,28 @@
 
     <!-- 인증 코드 입력 -->
     <div v-if="isCodeSent && !isVerified" class="verification-input-group">
-      <input
-        v-model="verificationCode"
-        type="text"
-        placeholder="인증 코드 입력"
-        class="form-input"
-        maxlength="6"
-      />
+      <div class="code-input-wrapper">
+        <input
+          v-model="verificationCode"
+          type="text"
+          placeholder="인증 코드 입력"
+          class="form-input code-input"
+          maxlength="6"
+        />
+        <span v-if="timeRemaining > 0" class="timer">
+          {{ formatTime(timeRemaining) }}
+        </span>
+        <span v-else class="timer expired">시간만료</span>
+      </div>
       <BaseButton
         type="button"
         @click="handleVerifyCode"
         :disabled="!verificationCode || isVerifying"
         variant="primary"
+        class="verify-button"
       >
         확인
       </BaseButton>
-      <span v-if="timeRemaining > 0" class="timer">
-        {{ formatTime(timeRemaining) }}
-      </span>
-      <span v-else class="timer expired">시간만료</span>
     </div>
 
     <p v-if="error" class="error-message">{{ error }}</p>
@@ -90,7 +93,12 @@ const props = defineProps({
   error: String,
 })
 
-const emit = defineEmits(['update:emailId', 'update:selectedDomain', 'update:customDomain', 'verified'])
+const emit = defineEmits([
+  'update:emailId',
+  'update:selectedDomain',
+  'update:customDomain',
+  'verified',
+])
 
 const emailId = computed({
   get: () => props.emailId,
@@ -212,18 +220,39 @@ watch([emailId, selectedDomain, customDomain], () => {
 
 .verification-input-group {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 0.5rem;
 }
 
+.code-input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.code-input {
+  flex: 1;
+  padding-right: 4.5rem;
+}
+
 .timer {
+  position: absolute;
+  right: 0.75rem;
   font-weight: 600;
   color: var(--primary-color);
   white-space: nowrap;
+  font-size: 0.875rem;
+  pointer-events: none;
 }
 
 .timer.expired {
   color: var(--error-color);
+}
+
+.verify-button {
+  flex-shrink: 0;
+  min-width: fit-content;
 }
 
 .error-message {
@@ -238,20 +267,23 @@ watch([emailId, selectedDomain, customDomain], () => {
   padding: 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  background-color: var(--search-input-background-color);
+  background-color: var(--card-color);
   color: var(--text-primary);
-  font-size: 1rem;
+  transition: border-color 0.2s ease;
 }
 
 .form-input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px var(--primary-light);
 }
 
 .form-input:disabled {
   background-color: var(--disabled-bg, #f3f4f6);
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.7;
+}
+
+.email-input-group .form-input {
+  width: 94%;
 }
 </style>
