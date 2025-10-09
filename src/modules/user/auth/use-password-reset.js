@@ -2,7 +2,8 @@ import { ref } from 'vue'
 import axios from 'axios'
 
 export function usePasswordReset() {
-  const currentStep = ref(1) // 1: 이메일, 2: 인증코드, 3: 새 비밀번호
+  const currentStep = ref(1) // 1: 이름과 이메일, 2: 인증코드, 3: 새 비밀번호
+  const name = ref('')
   const email = ref('')
   const verificationCode = ref('')
   const newPassword = ref('')
@@ -14,19 +15,30 @@ export function usePasswordReset() {
   const isSendingCode = ref(false)
   const isVerifying = ref(false)
   const isResetting = ref(false)
+  const errorMessage = ref('')
+  const successMessage = ref('')
 
   let timer = null
 
   // 인증 코드 발송
   const sendResetCode = async () => {
+    errorMessage.value = ''
+    successMessage.value = ''
+
+    if (!name.value) {
+      errorMessage.value = '이름을 입력해주세요'
+      return false
+    }
+
     if (!email.value) {
-      alert('이메일을 입력해주세요')
+      errorMessage.value = '이메일을 입력해주세요'
       return false
     }
 
     isSendingCode.value = true
     try {
       await axios.post('/api/users/password-reset/send-code', {
+        name: name.value,
         email: email.value,
       })
 
@@ -35,11 +47,10 @@ export function usePasswordReset() {
       timeRemaining.value = 300 // 5분
       startTimer()
 
-      alert('비밀번호 재설정 코드가 이메일로 발송되었습니다')
+      successMessage.value = '비밀번호 재설정 코드가 이메일로 발송되었습니다'
       return true
     } catch (error) {
-      const message = error.response?.data || '코드 발송에 실패했습니다'
-      alert(message)
+      errorMessage.value = error.response?.data || '코드 발송에 실패했습니다'
       return false
     } finally {
       isSendingCode.value = false
@@ -48,8 +59,11 @@ export function usePasswordReset() {
 
   // 인증 코드 검증
   const verifyResetCode = async () => {
+    errorMessage.value = ''
+    successMessage.value = ''
+
     if (!verificationCode.value) {
-      alert('인증 코드를 입력해주세요')
+      errorMessage.value = '인증 코드를 입력해주세요'
       return false
     }
 
@@ -64,11 +78,10 @@ export function usePasswordReset() {
       currentStep.value = 3
       stopTimer()
 
-      alert('인증이 완료되었습니다')
+      successMessage.value = '인증이 완료되었습니다'
       return true
     } catch (error) {
-      const message = error.response?.data || '인증 코드가 유효하지 않거나 만료되었습니다'
-      alert(message)
+      errorMessage.value = error.response?.data || '인증 코드가 유효하지 않거나 만료되었습니다'
       return false
     } finally {
       isVerifying.value = false
@@ -77,13 +90,16 @@ export function usePasswordReset() {
 
   // 비밀번호 재설정
   const resetPassword = async () => {
+    errorMessage.value = ''
+    successMessage.value = ''
+
     if (!newPassword.value || !confirmPassword.value) {
-      alert('새 비밀번호를 입력해주세요')
+      errorMessage.value = '새 비밀번호를 입력해주세요'
       return false
     }
 
     if (newPassword.value !== confirmPassword.value) {
-      alert('비밀번호가 일치하지 않습니다')
+      errorMessage.value = '비밀번호가 일치하지 않습니다'
       return false
     }
 
@@ -94,11 +110,10 @@ export function usePasswordReset() {
         newPassword: newPassword.value,
       })
 
-      alert('비밀번호가 성공적으로 변경되었습니다')
+      successMessage.value = '비밀번호가 성공적으로 변경되었습니다'
       return true
     } catch (error) {
-      const message = error.response?.data || '비밀번호 변경에 실패했습니다'
-      alert(message)
+      errorMessage.value = error.response?.data || '비밀번호 변경에 실패했습니다'
       return false
     } finally {
       isResetting.value = false
@@ -135,6 +150,7 @@ export function usePasswordReset() {
   // 초기화
   const reset = () => {
     currentStep.value = 1
+    name.value = ''
     email.value = ''
     verificationCode.value = ''
     newPassword.value = ''
@@ -142,11 +158,14 @@ export function usePasswordReset() {
     isCodeSent.value = false
     isCodeVerified.value = false
     timeRemaining.value = 0
+    errorMessage.value = ''
+    successMessage.value = ''
     stopTimer()
   }
 
   return {
     currentStep,
+    name,
     email,
     verificationCode,
     newPassword,
@@ -157,6 +176,8 @@ export function usePasswordReset() {
     isSendingCode,
     isVerifying,
     isResetting,
+    errorMessage,
+    successMessage,
     sendResetCode,
     verifyResetCode,
     resetPassword,
