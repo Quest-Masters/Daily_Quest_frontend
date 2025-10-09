@@ -1,5 +1,6 @@
 <script setup>
 import PersonalInformation from '@/modules/user/register/components/PersonalInformation.vue'
+import EmailVerification from '@/modules/user/register/components/EmailVerification.vue'
 import BaseInput from '@/components/BaseSetting/BaseInput.vue'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 import { useUserRegisterStore } from '../user-store'
@@ -15,6 +16,10 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const showModal = ref(false)
 
+// 이메일 인증 상태
+const isEmailVerified = ref(false)
+const verifiedEmail = ref('')
+
 const openModal = () => {
   showModal.value = true
 }
@@ -22,6 +27,11 @@ const openModal = () => {
 const handleModalClose = () => {
   form.agreeTerms = true
   showModal.value = false
+}
+
+const handleEmailVerified = (email) => {
+  isEmailVerified.value = true
+  verifiedEmail.value = email
 }
 
 const { form, errors } = registerStore
@@ -83,6 +93,13 @@ const handleSubmit = async () => {
   isLoading.value = true
   errorMessage.value = ''
 
+  // 이메일 인증 확인
+  if (!isEmailVerified.value) {
+    alert('이메일 인증을 완료해주세요!')
+    isLoading.value = false
+    return
+  }
+
   if (!idChecked.value || isDuplicateId.value) {
     alert(!idChecked.value ? '아이디 중복 확인을 해주세요!' : '이미 사용 중인 아이디입니다.')
     isLoading.value = false
@@ -138,14 +155,15 @@ const handleSubmit = async () => {
     <div class="form-group">
       <label for="id" class="form-label">아이디</label>
       <div class="input-with-button">
-        <input
-          id="id"
-          v-model="form.id"
-          type="text"
-          placeholder="아이디를 입력하세요."
-          class="form-input"
-          required
-        />
+        <div class="input-wrapper">
+          <base-input
+            id="id"
+            v-model="form.id"
+            type="text"
+            placeholder="아이디를 입력하세요"
+            required
+          />
+        </div>
         <BaseButton type="button" @click="checkDuplicateId" variant="secondary">확인</BaseButton>
       </div>
       <p v-if="errors.id" class="error-message">{{ errors.id }}</p>
@@ -161,38 +179,15 @@ const handleSubmit = async () => {
       required
     />
 
-    <div class="form-group">
-      <label for="email-id" class="form-label">이메일</label>
-      <div class="email-input-group">
-        <input
-          id="email-id"
-          v-model="form.email.id"
-          type="text"
-          placeholder="아이디"
-          class="form-input email-id"
-          required
-        />
-        <span class="email-separator">@</span>
-        <select
-          v-model="form.selectedDomain"
-          class="form-input email-domain-select"
-          v-if="form.selectedDomain !== 'custom'"
-        >
-          <option v-for="domain in form.emailDomains" :key="domain.value" :value="domain.value">
-            {{ domain.label }}
-          </option>
-        </select>
-        <input
-          v-if="form.selectedDomain === 'custom'"
-          v-model="form.customDomain"
-          type="text"
-          placeholder="직접 입력"
-          class="form-input email-domain-input"
-          required
-        />
-      </div>
-      <p v-if="errors.email" class="error-message">{{ errors.email }}</p>
-    </div>
+    <!-- 이메일 인증 컴포넌트 -->
+    <EmailVerification
+      v-model:emailId="form.email.id"
+      v-model:selectedDomain="form.selectedDomain"
+      v-model:customDomain="form.customDomain"
+      :emailDomains="form.emailDomains"
+      :error="errors.email"
+      @verified="handleEmailVerified"
+    />
 
     <div class="form-group">
       <label for="phone-first" class="form-label">휴대폰 번호</label>
@@ -256,7 +251,7 @@ const handleSubmit = async () => {
       <p v-if="errors.agreeTerms" class="error-message">{{ errors.agreeTerms }}</p>
     </div>
 
-    <base-button type="submit" variant="primary" block :disabled="isLoading">
+    <base-button type="submit" variant="primary" block :disabled="isLoading || !isEmailVerified">
       {{ isLoading ? '가입 중...' : '회원가입' }}
     </base-button>
 
@@ -328,44 +323,34 @@ const handleSubmit = async () => {
 }
 
 .form-input {
-  width: 100%;
+  width: 94%;
   padding: 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  background-color: var(--search-input-background-color);
+  background-color: var(--card-color);
   color: var(--text-primary);
-  font-size: 1rem;
+  transition: border-color 0.2s ease;
 }
 
 .form-input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px var(--primary-light);
 }
 
-.email-input-group,
+.form-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .phone-input-group {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.email-id {
-  flex: 1;
-}
-
-.email-separator,
 .phone-separator {
   font-weight: 500;
   color: var(--text-secondary);
-}
-
-.email-domain-select {
-  flex: 1;
-}
-
-.email-domain-input {
-  flex: 1;
 }
 
 .phone-part {
@@ -383,5 +368,22 @@ const handleSubmit = async () => {
 .input-with-button {
   display: flex;
   gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.input-with-button .input-wrapper {
+  flex: 1;
+}
+
+.input-with-button .input-wrapper :deep(.form-group) {
+  margin-bottom: 0;
+}
+
+.input-with-button :deep(button) {
+  white-space: nowrap;
+  min-width: fit-content;
+  padding: 0.75rem 1rem;
+  flex-shrink: 0;
+  margin-top: 0;
 }
 </style>
