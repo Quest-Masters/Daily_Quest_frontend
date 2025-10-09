@@ -91,7 +91,7 @@ const handleSubmit = async () => {
       <div class="user-define">
         <router-link to="/find-id" class="forgot-id">아이디 찾기</router-link>
         <a> \ </a>
-        <router-link to="/find-password" class="forgot-password">비밀번호 찾기</router-link>
+        <router-link to="/find-password" class="forgot-password">비밀번호 재설정</router-link>
       </div>
     </div>
 
