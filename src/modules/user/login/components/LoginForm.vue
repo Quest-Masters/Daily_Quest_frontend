@@ -134,9 +134,19 @@ const handleSubmit = async () => {
   margin-right: 0.5rem;
 }
 
+.user-define {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .forgot-id {
   color: var(--primary-color);
   text-decoration: none;
+}
+
+.forgot-id:hover {
+  text-decoration: underline;
 }
 
 .forgot-password {
