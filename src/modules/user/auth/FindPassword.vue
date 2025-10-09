@@ -24,8 +24,18 @@
         </div>
       </div>
 
-      <!-- Step 1: 이메일 입력 -->
+      <!-- Step 1: 이름과 이메일 입력 -->
       <div v-if="currentStep === 1" class="auth-form">
+        <base-input
+          id="name"
+          label="이름"
+          v-model="name"
+          type="text"
+          placeholder="이름을 입력하세요"
+          :error="nameError"
+          required
+        />
+
         <base-input
           id="email"
           label="이메일"
@@ -39,6 +49,9 @@
         <base-button @click="handleSendCode" variant="primary" block :disabled="isSendingCode">
           {{ isSendingCode ? '발송 중...' : '인증 코드 발송' }}
         </base-button>
+
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
       </div>
 
       <!-- Step 2: 인증 코드 입력 -->
@@ -78,6 +91,9 @@
             재전송
           </base-button>
         </div>
+
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
       </div>
 
       <!-- Step 3: 새 비밀번호 입력 -->
@@ -116,6 +132,9 @@
         <base-button @click="handleResetPassword" variant="primary" block :disabled="isResetting">
           {{ isResetting ? '변경 중...' : '비밀번호 변경' }}
         </base-button>
+
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
       </div>
 
       <div class="auth-links">
@@ -138,6 +157,7 @@ const router = useRouter()
 
 const {
   currentStep,
+  name,
   email,
   verificationCode,
   newPassword,
@@ -146,11 +166,19 @@ const {
   isSendingCode,
   isVerifying,
   isResetting,
+  errorMessage,
+  successMessage,
   sendResetCode,
   verifyResetCode,
   resetPassword,
   formatTime,
 } = usePasswordReset()
+
+const nameError = computed(() => {
+  if (!name.value) return ''
+  if (name.value.length < 2) return '이름은 최소 2자 이상이어야 합니다'
+  return ''
+})
 
 const emailError = computed(() => {
   if (!email.value) return ''
@@ -178,7 +206,7 @@ const passwordRules = computed(() => ({
 }))
 
 const handleSendCode = async () => {
-  if (emailError.value) return
+  if (nameError.value || emailError.value) return
   await sendResetCode()
 }
 
@@ -456,5 +484,25 @@ const handleResetPassword = async () => {
 .divider {
   margin: 0 0.75rem;
   color: var(--border-color);
+}
+
+.error-message {
+  color: var(--error-color);
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  text-align: center;
+  padding: 0.75rem;
+  background-color: rgba(244, 67, 54, 0.1);
+  border-radius: 8px;
+}
+
+.success-message {
+  color: var(--success-color);
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  text-align: center;
+  padding: 0.75rem;
+  background-color: rgba(16, 185, 129, 0.1);
+  border-radius: 8px;
 }
 </style>
