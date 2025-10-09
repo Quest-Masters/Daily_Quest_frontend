@@ -9,10 +9,12 @@
   --background-color: #FAFAFA;
   --card-color: #FFFFFF;
   --border-color: #E0E0E0;
-  --success-color: #4CAF50;
+  --success-color: #10b981;
   --error-color: #F44336;
   --warning-color: #FFC107;
   --info-color: #2196F3;
+  --search-input-background-color: #FFFFFF;
+  --disabled-bg: #f3f4f6;
 }
 
 /* 다크 테마 */
@@ -30,6 +32,8 @@
   --error-color: #EF5350;
   --warning-color: #FFD54F;
   --info-color: #42A5F5;
+  --search-input-background-color: #2C2C2C;
+  --disabled-bg: #3a3a3a;
 }
 
 /* 글로벌 스타일 */
