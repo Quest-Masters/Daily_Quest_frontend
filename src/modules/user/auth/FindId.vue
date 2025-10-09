@@ -8,6 +8,16 @@
 
       <form @submit.prevent="handleSubmit" class="auth-form">
         <base-input
+          id="name"
+          label="이름"
+          v-model="name"
+          type="text"
+          placeholder="이름을 입력하세요"
+          :error="nameError"
+          required
+        />
+
+        <base-input
           id="email"
           label="이메일"
           v-model="email"
@@ -43,11 +53,28 @@ import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 
 const router = useRouter()
 
+const name = ref('')
 const email = ref('')
+const nameError = ref('')
 const emailError = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 const isLoading = ref(false)
+
+const validateName = () => {
+  if (!name.value) {
+    nameError.value = '이름을 입력해주세요'
+    return false
+  }
+
+  if (name.value.length < 2) {
+    nameError.value = '이름은 최소 2자 이상이어야 합니다'
+    return false
+  }
+
+  nameError.value = ''
+  return true
+}
 
 const validateEmail = () => {
   if (!email.value) {
@@ -69,7 +96,7 @@ const handleSubmit = async () => {
   errorMessage.value = ''
   successMessage.value = ''
 
-  if (!validateEmail()) {
+  if (!validateName() || !validateEmail()) {
     return
   }
 
@@ -77,6 +104,7 @@ const handleSubmit = async () => {
 
   try {
     const response = await axios.post('/api/users/find-id', {
+      name: name.value,
       email: email.value,
     })
 
