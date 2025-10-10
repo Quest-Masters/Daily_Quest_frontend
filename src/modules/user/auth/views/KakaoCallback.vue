@@ -16,8 +16,11 @@ onMounted(async () => {
   const success = route.query.success
   const error = route.query.error
 
+  console.log('🔍 카카오 콜백 페이지 진입:', { success, error })
+
   // 에러 처리
   if (error) {
+    console.error('❌ 카카오 로그인 에러 파라미터:', error)
     errorMessage.value = '카카오 로그인에 실패했습니다.'
     isProcessing.value = false
     setTimeout(() => {
@@ -29,10 +32,13 @@ onMounted(async () => {
   // 성공 처리
   if (success === 'true') {
     try {
+      console.log('📡 세션 정보 요청 중...')
       // 백엔드에서 세션을 생성했으므로, 프론트엔드에서 세션 정보 확인
       const response = await axios.get('/api/users/session', {
         withCredentials: true,
       })
+
+      console.log('📨 세션 정보 응답:', response.data)
 
       if (response.data.success) {
         // 로그인 상태 업데이트
@@ -45,13 +51,14 @@ onMounted(async () => {
         }
 
         isProcessing.value = false
-        console.log('✅ 카카오 로그인 성공')
+        console.log('✅ 카카오 로그인 성공:', loginStore.currentUser)
 
         // 홈으로 이동
         setTimeout(() => {
           router.push('/')
         }, 1500)
       } else {
+        console.error('❌ 세션 응답에서 success=false:', response.data)
         errorMessage.value = '세션 정보를 가져오지 못했습니다.'
         isProcessing.value = false
         setTimeout(() => {
@@ -59,8 +66,10 @@ onMounted(async () => {
         }, 2000)
       }
     } catch (error) {
-      console.error('세션 정보 가져오기 실패:', error)
-      errorMessage.value = '로그인 처리 중 오류가 발생했습니다.'
+      console.error('❌ 세션 정보 가져오기 실패:', error)
+      console.error('응답 데이터:', error.response?.data)
+      console.error('응답 상태:', error.response?.status)
+      errorMessage.value = `로그인 처리 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`
       isProcessing.value = false
       setTimeout(() => {
         router.push('/login')
@@ -68,6 +77,7 @@ onMounted(async () => {
     }
   } else {
     // success 파라미터가 없는 경우
+    console.error('❌ success 파라미터가 없거나 잘못됨:', success)
     errorMessage.value = '잘못된 접근입니다.'
     isProcessing.value = false
     setTimeout(() => {
