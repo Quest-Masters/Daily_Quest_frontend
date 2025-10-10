@@ -91,7 +91,7 @@ const handleSubmit = async () => {
       <div class="user-define">
         <router-link to="/find-id" class="forgot-id">아이디 찾기</router-link>
         <a> \ </a>
-        <router-link to="/find-password" class="forgot-password">비밀번호 찾기</router-link>
+        <router-link to="/find-password" class="forgot-password">비밀번호 재설정</router-link>
       </div>
     </div>
 
@@ -134,9 +134,19 @@ const handleSubmit = async () => {
   margin-right: 0.5rem;
 }
 
+.user-define {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .forgot-id {
   color: var(--primary-color);
   text-decoration: none;
+}
+
+.forgot-id:hover {
+  text-decoration: underline;
 }
 
 .forgot-password {

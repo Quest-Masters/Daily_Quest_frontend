@@ -39,8 +39,32 @@ export const useUserRegisterStore = defineStore('userRegister', () => {
     agreeTerms: '',
   })
 
+  const resetForm = () => {
+    form.id = ''
+    form.name = ''
+    form.phone.first = '010'
+    form.phone.middle = ''
+    form.phone.last = ''
+    form.email.id = ''
+    form.email.domain = ''
+    form.customDomain = ''
+    form.selectedDomain = ''
+    form.password = ''
+    form.confirmPassword = ''
+    form.agreeTerms = false
+
+    errors.id = ''
+    errors.name = ''
+    errors.phone = ''
+    errors.email = ''
+    errors.password = ''
+    errors.confirmPassword = ''
+    errors.agreeTerms = ''
+  }
+
   return {
     form,
     errors,
+    resetForm,
   }
 })

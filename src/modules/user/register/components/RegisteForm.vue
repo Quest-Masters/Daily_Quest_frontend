@@ -140,6 +140,7 @@ const handleSubmit = async () => {
     const response = await axios.post('/api/users/register', formData)
 
     alert('회원가입 성공!')
+    registerStore.resetForm() // 회원가입 성공 시 폼 초기화
     router.push('/login')
   } catch (err) {
     errorMessage.value = '회원가입에 실패했습니다.'

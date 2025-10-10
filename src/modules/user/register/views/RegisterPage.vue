@@ -16,7 +16,16 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import RegisterForm from '@/modules/user/register/components/RegisteForm.vue'
+import { useUserRegisterStore } from '@/modules/user/register/user-store'
+
+const registerStore = useUserRegisterStore()
+
+// 페이지 진입 시 폼 초기화
+onMounted(() => {
+  registerStore.resetForm()
+})
 </script>
 
 <style scoped>

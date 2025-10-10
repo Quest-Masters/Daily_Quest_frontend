@@ -3,121 +3,124 @@
     <div class="auth-container">
       <div class="auth-header">
         <h1>아이디 찾기</h1>
-        <p>회원가입 시 등록한 정보로 아이디를 찾을 수 있습니다.</p>
+        <p>가입 시 등록한 이메일 주소를 입력해주세요</p>
       </div>
 
-      <div v-if="!foundId">
-        <form class="auth-form">
-          <base-input
-            id="name"
-            label="이름"
-            v-model="form.name"
-            type="text"
-            placeholder="이름을 입력하세요"
-            :error="errors.name"
-            required
-          />
+      <form @submit.prevent="handleSubmit" class="auth-form">
+        <base-input
+          id="name"
+          label="이름"
+          v-model="name"
+          type="text"
+          placeholder="이름을 입력하세요"
+          :error="nameError"
+          required
+        />
 
-          <div class="verification-method">
-            <p class="method-label">인증 방법</p>
-            <div class="method-options">
-              <label class="radio-label">
-                <input type="radio" v-model="form.verificationMethod" value="email" />
-                <span>이메일 인증</span>
-              </label>
-              <label class="radio-label">
-                <input type="radio" v-model="form.verificationMethod" value="phone" />
-                <span>휴대폰 인증</span>
-              </label>
-            </div>
-          </div>
+        <base-input
+          id="email"
+          label="이메일"
+          v-model="email"
+          type="email"
+          placeholder="example@email.com"
+          :error="emailError"
+          required
+        />
 
-          <base-input
-            v-if="form.verificationMethod === 'email'"
-            id="email"
-            label="이메일"
-            v-model="form.email"
-            type="email"
-            placeholder="회원가입 시 등록한 이메일을 입력하세요"
-            :error="errors.email"
-            required
-          />
+        <base-button type="submit" variant="primary" block :disabled="isLoading">
+          {{ isLoading ? '처리 중...' : '아이디 찾기' }}
+        </base-button>
 
-          <base-input
-            v-else-if="form.verificationMethod === 'phone'"
-            id="phone"
-            label="휴대폰 번호"
-            v-model="form.phone"
-            type="tel"
-            placeholder="회원가입 시 등록한 휴대폰 번호를 입력하세요"
-            :error="errors.phone"
-            required
-          />
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+      </form>
 
-          <div v-if="isVerificationSent" class="verification-code">
-            <base-input
-              id="verificationCode"
-              label="인증 코드"
-              v-model="form.verificationCode"
-              type="text"
-              placeholder="인증 코드를 입력하세요"
-              :error="errors.verificationCode"
-              required
-            />
-            <div class="verification-timer">{{ formattedTimer }}</div>
-          </div>
-
-          <base-button v-if="!isVerificationSent" type="button" variant="primary" block>
-            {{ isLoading ? '처리 중...' : '인증 요청' }}
-          </base-button>
-
-          <base-button
-            v-else
-            type="submit"
-            variant="primary"
-            block
-            :disabled="isLoading || !form.verificationCode"
-          >
-            {{ isLoading ? '확인 중...' : '확인' }}
-          </base-button>
-
-          <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
-
-          <div class="auth-links">
-            <p>
-              <router-link to="/login">로그인으로 돌아가기</router-link>
-            </p>
-          </div>
-        </form>
+      <div class="auth-links">
+        <router-link to="/login">로그인으로 돌아가기</router-link>
+        <span class="divider">|</span>
+        <router-link to="/find-password">비밀번호 재설정</router-link>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from 'axios'
 import BaseInput from '@/components/BaseSetting/BaseInput.vue'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 
-const isLoading = ref(false)
+const router = useRouter()
+
+const name = ref('')
+const email = ref('')
+const nameError = ref('')
+const emailError = ref('')
 const errorMessage = ref('')
-const isVerificationSent = ref(false)
-const foundId = ref(null)
+const successMessage = ref('')
+const isLoading = ref(false)
 
-const form = reactive({
-  name: '',
-  verificationMethod: 'email',
-  email: '',
-  phone: '',
-  verificationCode: '',
-})
+const validateName = () => {
+  if (!name.value) {
+    nameError.value = '이름을 입력해주세요'
+    return false
+  }
 
-const errors = reactive({
-  name: '',
-  email: '',
-  phone: '',
-  verificationCode: '',
-})
+  if (name.value.length < 2) {
+    nameError.value = '이름은 최소 2자 이상이어야 합니다'
+    return false
+  }
+
+  nameError.value = ''
+  return true
+}
+
+const validateEmail = () => {
+  if (!email.value) {
+    emailError.value = '이메일을 입력해주세요'
+    return false
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    emailError.value = '올바른 이메일 형식이 아닙니다'
+    return false
+  }
+
+  emailError.value = ''
+  return true
+}
+
+const handleSubmit = async () => {
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  if (!validateName() || !validateEmail()) {
+    return
+  }
+
+  isLoading.value = true
+
+  try {
+    const response = await axios.post('/api/users/find-id', {
+      name: name.value,
+      email: email.value,
+    })
+
+    successMessage.value = response.data || '아이디가 이메일로 발송되었습니다.'
+
+    // 3초 후 로그인 페이지로 이동
+    setTimeout(() => {
+      router.push('/login')
+    }, 3000)
+  } catch (error) {
+    errorMessage.value = error.response?.data || '아이디 찾기에 실패했습니다.'
+    console.error('아이디 찾기 에러:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -216,8 +219,28 @@ const errors = reactive({
   text-decoration: underline;
 }
 
-.result-box h2 {
-  color: var(--primary-color);
-  margin-bottom: 1rem;
+.error-message {
+  color: var(--error-color);
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  text-align: center;
+  padding: 0.75rem;
+  background-color: rgba(244, 67, 54, 0.1);
+  border-radius: 8px;
+}
+
+.success-message {
+  color: var(--success-color);
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  text-align: center;
+  padding: 0.75rem;
+  background-color: rgba(16, 185, 129, 0.1);
+  border-radius: 8px;
+}
+
+.divider {
+  margin: 0 0.75rem;
+  color: var(--border-color);
 }
 </style>
