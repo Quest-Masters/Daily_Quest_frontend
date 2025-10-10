@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserLoginStore } from '@/modules/user/login/login-store.js'
-import axios from 'axios'
+import { setAccessToken } from '@/utils/cookie-utils'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,8 +15,13 @@ onMounted(async () => {
   // URL에서 쿼리 파라미터 추출
   const success = route.query.success
   const error = route.query.error
+  const token = route.query.token
+  const userId = route.query.userId
+  const name = route.query.name
+  const email = route.query.email
+  const profileImage = route.query.profileImage
 
-  console.log('🔍 카카오 콜백 페이지 진입:', { success, error })
+  console.log('🔍 카카오 콜백 페이지 진입:', { success, error, token })
 
   // 에러 처리
   if (error) {
@@ -30,54 +35,45 @@ onMounted(async () => {
   }
 
   // 성공 처리
-  if (success === 'true') {
+  if (success === 'true' && token) {
     try {
-      console.log('📡 세션 정보 요청 중...')
-      // 백엔드에서 세션을 생성했으므로, 프론트엔드에서 세션 정보 확인
-      const response = await axios.get('/api/users/session', {
-        withCredentials: true,
-      })
+      console.log('✅ 카카오 로그인 토큰 수신:', token.substring(0, 20) + '...')
 
-      console.log('📨 세션 정보 응답:', response.data)
+      // Access Token을 쿠키에 저장 (2분 만료)
+      const expireTime = Date.now() + 1000 * 60 * 2 // 2분
+      loginStore.token = token
+      loginStore.expiresAt = new Date(expireTime).toISOString()
 
-      if (response.data.success) {
-        // 로그인 상태 업데이트
-        loginStore.isLoggedIn = true
-        loginStore.currentUser = {
-          userId: response.data.userId,
-          name: response.data.name,
-          email: response.data.email,
-          profileImage: response.data.profileImage,
-        }
+      // 쿠키에 저장
+      setAccessToken(token, expireTime)
 
-        isProcessing.value = false
-        console.log('✅ 카카오 로그인 성공:', loginStore.currentUser)
-
-        // 홈으로 이동
-        setTimeout(() => {
-          router.push('/')
-        }, 1500)
-      } else {
-        console.error('❌ 세션 응답에서 success=false:', response.data)
-        errorMessage.value = '세션 정보를 가져오지 못했습니다.'
-        isProcessing.value = false
-        setTimeout(() => {
-          router.push('/login')
-        }, 2000)
+      // 로그인 상태 업데이트
+      loginStore.isLoggedIn = true
+      loginStore.currentUser = {
+        userId: userId,
+        name: name,
+        email: email || '',
+        profileImage: profileImage || '',
       }
+
+      isProcessing.value = false
+      console.log('✅ 카카오 로그인 성공:', loginStore.currentUser)
+
+      // 홈으로 이동
+      setTimeout(() => {
+        router.push('/')
+      }, 1500)
     } catch (error) {
-      console.error('❌ 세션 정보 가져오기 실패:', error)
-      console.error('응답 데이터:', error.response?.data)
-      console.error('응답 상태:', error.response?.status)
-      errorMessage.value = `로그인 처리 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`
+      console.error('❌ 카카오 로그인 처리 실패:', error)
+      errorMessage.value = '로그인 처리 중 오류가 발생했습니다.'
       isProcessing.value = false
       setTimeout(() => {
         router.push('/login')
       }, 2000)
     }
   } else {
-    // success 파라미터가 없는 경우
-    console.error('❌ success 파라미터가 없거나 잘못됨:', success)
+    // success 파라미터가 없거나 token이 없는 경우
+    console.error('❌ success 또는 token 파라미터가 없음:', { success, token })
     errorMessage.value = '잘못된 접근입니다.'
     isProcessing.value = false
     setTimeout(() => {
