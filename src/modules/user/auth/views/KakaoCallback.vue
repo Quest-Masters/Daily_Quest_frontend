@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserLoginStore } from '@/modules/user/login/login-store.js'
+import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
@@ -11,12 +12,13 @@ const isProcessing = ref(true)
 const errorMessage = ref('')
 
 onMounted(async () => {
-  // URL에서 인가 코드 추출
-  const code = route.query.code
+  // URL에서 쿼리 파라미터 추출
+  const success = route.query.success
   const error = route.query.error
 
+  // 에러 처리
   if (error) {
-    errorMessage.value = '카카오 로그인이 취소되었습니다.'
+    errorMessage.value = '카카오 로그인에 실패했습니다.'
     isProcessing.value = false
     setTimeout(() => {
       router.push('/login')
@@ -24,38 +26,53 @@ onMounted(async () => {
     return
   }
 
-  if (!code) {
-    errorMessage.value = '인가 코드를 받지 못했습니다.'
-    isProcessing.value = false
-    setTimeout(() => {
-      router.push('/login')
-    }, 2000)
-    return
-  }
+  // 성공 처리
+  if (success === 'true') {
+    try {
+      // 백엔드에서 세션을 생성했으므로, 프론트엔드에서 세션 정보 확인
+      const response = await axios.get('/api/users/session', {
+        withCredentials: true,
+      })
 
-  try {
-    // 카카오 콜백 처리
-    const success = await loginStore.handleKakaoCallback(code)
+      if (response.data.success) {
+        // 로그인 상태 업데이트
+        loginStore.isLoggedIn = true
+        loginStore.currentUser = {
+          userId: response.data.userId,
+          name: response.data.name,
+          email: response.data.email,
+          profileImage: response.data.profileImage,
+        }
 
-    if (success) {
-      // 로그인 성공 시 홈으로 이동
-      setTimeout(() => {
-        router.push('/')
-      }, 1500)
-    } else {
-      errorMessage.value = loginStore.errorMessage || '로그인에 실패했습니다.'
+        isProcessing.value = false
+        console.log('✅ 카카오 로그인 성공')
+
+        // 홈으로 이동
+        setTimeout(() => {
+          router.push('/')
+        }, 1500)
+      } else {
+        errorMessage.value = '세션 정보를 가져오지 못했습니다.'
+        isProcessing.value = false
+        setTimeout(() => {
+          router.push('/login')
+        }, 2000)
+      }
+    } catch (error) {
+      console.error('세션 정보 가져오기 실패:', error)
+      errorMessage.value = '로그인 처리 중 오류가 발생했습니다.'
+      isProcessing.value = false
       setTimeout(() => {
         router.push('/login')
       }, 2000)
     }
-  } catch (error) {
-    console.error('카카오 로그인 처리 중 오류:', error)
-    errorMessage.value = '로그인 처리 중 오류가 발생했습니다.'
+  } else {
+    // success 파라미터가 없는 경우
+    errorMessage.value = '잘못된 접근입니다.'
+    isProcessing.value = false
     setTimeout(() => {
       router.push('/login')
     }, 2000)
-  } finally {
-    isProcessing.value = false
   }
 })
 </script>
