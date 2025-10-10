@@ -165,6 +165,66 @@ export const useUserLoginStore = defineStore('userLogin', () => {
     }
   }
 
+  // 카카오 로그인 URL 가져오기
+  const getKakaoLoginUrl = async () => {
+    try {
+      const response = await axios.get('/api/auth/kakao/login-url')
+      return response.data.loginUrl
+    } catch (error) {
+      console.error('카카오 로그인 URL 가져오기 실패:', error)
+      errorMessage.value = '카카오 로그인을 시작할 수 없습니다.'
+      return null
+    }
+  }
+
+  // 카카오 로그인 시작 (새 창으로 카카오 로그인 페이지 열기)
+  const loginWithKakao = async () => {
+    try {
+      const loginUrl = await getKakaoLoginUrl()
+      if (loginUrl) {
+        // 카카오 로그인 페이지로 리다이렉트
+        window.location.href = loginUrl
+      }
+    } catch (error) {
+      console.error('카카오 로그인 시작 실패:', error)
+      errorMessage.value = '카카오 로그인을 시작할 수 없습니다.'
+    }
+  }
+
+  // 카카오 콜백 처리 (인가 코드로 로그인 처리)
+  const handleKakaoCallback = async (code) => {
+    try {
+      const response = await axios.get('/api/auth/kakao/callback', {
+        params: { code },
+        withCredentials: true,
+      })
+
+      const data = response.data
+      if (data.success) {
+        // 카카오 로그인 성공 시 세션 설정
+        isLoggedIn.value = true
+        currentUser.value = {
+          userId: data.userId,
+          name: data.name,
+          email: data.email,
+          profileImage: data.profileImage,
+        }
+
+        // 세션 기반이므로 토큰은 서버에서 관리
+        // 필요시 access token을 받아서 저장할 수 있음
+        console.log('✅ 카카오 로그인 성공:', data.message)
+        return true
+      } else {
+        errorMessage.value = data.message || '카카오 로그인 실패'
+        return false
+      }
+    } catch (error) {
+      console.error('카카오 콜백 처리 실패:', error)
+      errorMessage.value = error.response?.data?.message || '카카오 로그인 처리 중 오류가 발생했습니다.'
+      return false
+    }
+  }
+
   return {
     isLoggedIn,
     currentUser,
@@ -177,5 +237,7 @@ export const useUserLoginStore = defineStore('userLogin', () => {
     restoreSession,
     refreshSession,
     refreshAccessToken,
+    loginWithKakao,
+    handleKakaoCallback,
   }
 })
