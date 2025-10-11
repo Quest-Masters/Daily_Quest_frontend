@@ -140,9 +140,9 @@ router.beforeEach(async (to, from, next) => {
         await loginStore.restoreSession()
       }
 
-      // 여전히 로그인되지 않았다면 Forbidden 페이지로
+      // 여전히 로그인되지 않았다면 로그인 페이지로
       if (!loginStore.isLoggedIn) {
-        next({ name: 'Forbidden' })
+        next({ name: 'Login', query: { redirect: to.fullPath } })
         return
       }
     }

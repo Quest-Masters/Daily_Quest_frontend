@@ -65,9 +65,12 @@ onMounted(async () => {
         isProcessing.value = false
         console.log('✅ 카카오 로그인 성공:', loginStore.currentUser)
 
-        // 홈으로 이동
+        // localStorage에서 저장된 redirect 경로 확인, 없으면 홈으로 이동
+        const redirectPath = localStorage.getItem('login_redirect') || '/'
+        localStorage.removeItem('login_redirect') // 사용 후 삭제
+
         setTimeout(() => {
-          router.push('/')
+          router.push(redirectPath)
         }, 1500)
       } else {
         throw new Error(response.data.message || '세션 정보를 가져오지 못했습니다.')

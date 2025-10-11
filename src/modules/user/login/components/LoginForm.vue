@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import BaseInput from '@/components/BaseSetting/BaseInput.vue'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 import { useUserLoginStore } from '@/modules/user/login/login-store.js'
@@ -23,11 +23,17 @@ const errors = reactive({
 
 const loginStore = useUserLoginStore()
 const router = useRouter()
+const route = useRoute()
 
 const { validateId, validatePassword, validateLogin } = useValidation(form, errors)
 
 // 카카오 로그인 핸들러
 const handleKakaoLogin = () => {
+  // 카카오 로그인 플로우에서도 redirect를 유지하기 위해 localStorage에 저장
+  const redirectPath = route.query.redirect
+  if (redirectPath) {
+    localStorage.setItem('login_redirect', redirectPath)
+  }
   loginStore.loginWithKakao()
 }
 
@@ -54,7 +60,9 @@ const handleSubmit = async () => {
 
     if (success) {
       loginExpiresAt.value = loginStore.expiresAt // Pinia에서 받은 로그인 만료 시간
-      router.push('/')
+      // 원래 가려던 페이지가 있으면 그곳으로, 없으면 홈으로 이동
+      const redirectPath = route.query.redirect || '/'
+      router.push(redirectPath)
     } else {
       errorMessage.value = loginStore.errorMessage
     }
