@@ -34,7 +34,8 @@ const handleKakaoLogin = () => {
   if (redirectPath) {
     localStorage.setItem('login_redirect', redirectPath)
   }
-  loginStore.loginWithKakao()
+  // rememberMe를 파라미터로 전달
+  loginStore.loginWithKakao(form.rememberMe)
 }
 
 watch(() => form.id, validateId)

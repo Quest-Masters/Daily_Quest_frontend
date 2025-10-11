@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import axios from 'axios'
-import { setAccessToken, removeAccessToken, getAccessToken, getTokenExpiry, isTokenExpired } from '@/utils/cookie-utils'
+import {
+  setAccessToken,
+  removeAccessToken,
+  getAccessToken,
+  getTokenExpiry,
+  isTokenExpired,
+} from '@/utils/cookie-utils'
 
 export const useUserLoginStore = defineStore('userLogin', () => {
   const isLoggedIn = ref(false)
@@ -26,11 +32,12 @@ export const useUserLoginStore = defineStore('userLogin', () => {
         currentUser.value = data.user
         token.value = data.token
 
-        const expireTime = new Date(Date.now() + 1000 * 60 * 2) // 2분으로 단축 (테스트용)
+        const expireTime = new Date(Date.now() + 1000 * 60 * 60) // 1시간
         expiresAt.value = expireTime.toISOString()
 
         // access token만 쿠키에 저장 (refresh token은 서버에서 HttpOnly 쿠키로 설정)
-        setAccessToken(data.token, Date.now() + 1000 * 60 * 2) // 2분
+        setAccessToken(data.token, Date.now() + 1000 * 60 * 60) // 1시간
+
         return true
       } else {
         errorMessage.value = data.message || '로그인 실패'
@@ -74,15 +81,44 @@ export const useUserLoginStore = defineStore('userLogin', () => {
       token.value = storedToken
       expiresAt.value = new Date(parseInt(storedExpiresAt)).toISOString()
 
+      // 토큰 만료 확인
       if (!isTokenExpired()) {
-        isLoggedIn.value = true
-        console.log('✅ 세션 복원 성공: 토큰이 유효함')
+        // 토큰이 유효하면 서버에서 사용자 정보 가져오기
+        try {
+          const response = await axios.get('/api/profile', {
+            withCredentials: true,
+          })
+
+          if (response.data) {
+            currentUser.value = {
+              userId: response.data.userId,
+              name: response.data.name,
+              email: response.data.email || '',
+              profileImage: response.data.profileImageUrl || '',
+            }
+            isLoggedIn.value = true
+            console.log('✅ 세션 복원 성공: 사용자 정보 로드됨', currentUser.value)
+          }
+        } catch (error) {
+          console.error('❌ 사용자 정보 조회 실패:', error)
+          // 401 에러면 토큰 갱신 시도
+          if (error.response?.status === 401) {
+            console.log('⏰ 토큰이 만료됨, refresh 토큰으로 갱신 시도...')
+            const refreshSuccess = await refreshAccessToken()
+            if (refreshSuccess) {
+              // 갱신 성공 후 사용자 정보 다시 가져오기
+              await restoreSession()
+            }
+          }
+        }
       } else {
         console.log('⏰ 토큰이 만료됨, refresh 토큰으로 갱신 시도...')
         // 토큰이 만료되었다면 refresh 토큰으로 자동 갱신 시도
         const refreshSuccess = await refreshAccessToken()
         if (refreshSuccess) {
-          console.log('✅ 토큰 갱신 성공: 세션 복원 완료')
+          console.log('✅ 토큰 갱신 성공: 사용자 정보 다시 로드')
+          // 갱신 성공 후 사용자 정보 가져오기
+          await restoreSession()
         } else {
           console.log('❌ 토큰 갱신 실패: 로그아웃 처리')
         }
@@ -101,8 +137,14 @@ export const useUserLoginStore = defineStore('userLogin', () => {
     isRefreshing.value = true
 
     try {
+      // 카카오 로그인 사용자인지 확인 (userId가 kakao_로 시작)
+      const isKakaoUser = currentUser.value?.userId?.startsWith('kakao_')
+      const refreshEndpoint = isKakaoUser ? '/api/auth/kakao/refresh' : '/api/users/refresh'
+
+      console.log(`🔄 토큰 갱신 시도: ${refreshEndpoint}`)
+
       const response = await axios.post(
-        '/api/users/refresh',
+        refreshEndpoint,
         {},
         {
           withCredentials: true, // HttpOnly 쿠키의 refresh token 자동 전송
@@ -111,21 +153,31 @@ export const useUserLoginStore = defineStore('userLogin', () => {
 
       const data = response.data
       if (data.success) {
-        token.value = data.token
+        // 카카오 로그인은 응답에 token이 없을 수 있음 (쿠키로 자동 설정)
+        if (data.token) {
+          token.value = data.token
+        } else {
+          // 쿠키에서 토큰 다시 읽기
+          token.value = getAccessToken()
+        }
 
-        const expireTime = new Date(Date.now() + 1000 * 60 * 2) // 2분으로 단축 (테스트용)
+        const expireTime = new Date(Date.now() + 1000 * 60 * 60) // 1시간
         expiresAt.value = expireTime.toISOString()
 
-        setAccessToken(data.token, Date.now() + 1000 * 60 * 2) // 2분
+        // 카카오는 서버에서 쿠키 설정, 일반 로그인은 클라이언트에서 설정
+        if (!isKakaoUser && data.token) {
+          setAccessToken(data.token, Date.now() + 1000 * 60 * 60) // 1시간
+        }
 
         isLoggedIn.value = true
+        console.log('✅ 토큰 갱신 성공')
         return true
       } else {
         logout()
         return false
       }
     } catch (error) {
-      console.error('토큰 갱신 실패:', error)
+      console.error('❌ 토큰 갱신 실패:', error)
       logout()
       return false
     } finally {
@@ -136,8 +188,12 @@ export const useUserLoginStore = defineStore('userLogin', () => {
   // 수동 세션 갱신 함수 (refreshAccessToken과 동일하지만 에러 메시지 설정 포함)
   const refreshSession = async () => {
     try {
+      // 카카오 로그인 사용자인지 확인 (userId가 kakao_로 시작)
+      const isKakaoUser = currentUser.value?.userId?.startsWith('kakao_')
+      const refreshEndpoint = isKakaoUser ? '/api/auth/kakao/refresh' : '/api/users/refresh'
+
       const response = await axios.post(
-        '/api/users/refresh',
+        refreshEndpoint,
         {},
         {
           withCredentials: true, // HttpOnly 쿠키의 refresh token 자동 전송
@@ -145,12 +201,21 @@ export const useUserLoginStore = defineStore('userLogin', () => {
       )
       const data = response.data
       if (data.success) {
-        token.value = data.token
+        // 카카오 로그인은 응답에 token이 없을 수 있음 (쿠키로 자동 설정)
+        if (data.token) {
+          token.value = data.token
+        } else {
+          token.value = getAccessToken()
+        }
 
-        const expireTime = new Date(Date.now() + 1000 * 60 * 2) // 2분으로 단축 (테스트용)
+        const expireTime = new Date(Date.now() + 1000 * 60 * 60) // 1시간
         expiresAt.value = expireTime.toISOString()
 
-        setAccessToken(data.token, Date.now() + 1000 * 60 * 2) // 2분
+        // 카카오는 서버에서 쿠키 설정, 일반 로그인은 클라이언트에서 설정
+        if (!isKakaoUser && data.token) {
+          setAccessToken(data.token, Date.now() + 1000 * 60 * 60) // 1시간
+        }
+
         isLoggedIn.value = true
         return true
       } else {
@@ -178,12 +243,14 @@ export const useUserLoginStore = defineStore('userLogin', () => {
   }
 
   // 카카오 로그인 시작 (새 창으로 카카오 로그인 페이지 열기)
-  const loginWithKakao = async () => {
+  const loginWithKakao = async (rememberMe = false) => {
     try {
       const loginUrl = await getKakaoLoginUrl()
       if (loginUrl) {
+        // rememberMe를 state 파라미터에 추가
+        const urlWithRememberMe = `${loginUrl}&state=${encodeURIComponent(JSON.stringify({ rememberMe }))}`
         // 카카오 로그인 페이지로 리다이렉트
-        window.location.href = loginUrl
+        window.location.href = urlWithRememberMe
       }
     } catch (error) {
       console.error('카카오 로그인 시작 실패:', error)
@@ -220,7 +287,8 @@ export const useUserLoginStore = defineStore('userLogin', () => {
       }
     } catch (error) {
       console.error('카카오 콜백 처리 실패:', error)
-      errorMessage.value = error.response?.data?.message || '카카오 로그인 처리 중 오류가 발생했습니다.'
+      errorMessage.value =
+        error.response?.data?.message || '카카오 로그인 처리 중 오류가 발생했습니다.'
       return false
     }
   }
