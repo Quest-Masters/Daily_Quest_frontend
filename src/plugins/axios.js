@@ -9,8 +9,11 @@ axios.defaults.withCredentials = true // httpOnly 쿠키 사용을 위해 모든
 // Request interceptor - 토큰 자동 추가
 axios.interceptors.request.use((config) => {
   const token = getAccessToken()
-  if (token) {
+  if (token && token !== 'null' && token !== 'undefined') {
     config.headers.Authorization = `Bearer ${token}`
+  } else {
+    // 토큰이 없거나 유효하지 않으면 Authorization 헤더 삭제
+    delete config.headers.Authorization
   }
   return config
 }, (error) => {

@@ -4,6 +4,7 @@ import Login from '@/modules/user/login/views/LoginPage.vue'
 import Register from '@/modules/user/register/views/RegisterPage.vue'
 import FindId from '@/modules/user/auth/FindId.vue'
 import FindPassword from '@/modules/user/auth/FindPassword.vue'
+import KakaoCallback from '@/modules/user/auth/views/KakaoCallback.vue'
 import NotFound from '@/components/NotFound.vue'
 import Forbidden from '@/components/Forbidden.vue'
 import ServerError from '@/components/ServerError.vue'
@@ -46,6 +47,11 @@ const routes = [
     path: '/find-password',
     name: 'FindPassword',
     component: FindPassword,
+  },
+  {
+    path: '/auth/kakao/callback',
+    name: 'KakaoCallback',
+    component: KakaoCallback,
   },
   { path: '/ai-quest', name: 'AiQuestGenerator', component: AiQuestGenerator },
 
@@ -134,9 +140,9 @@ router.beforeEach(async (to, from, next) => {
         await loginStore.restoreSession()
       }
 
-      // 여전히 로그인되지 않았다면 Forbidden 페이지로
+      // 여전히 로그인되지 않았다면 로그인 페이지로
       if (!loginStore.isLoggedIn) {
-        next({ name: 'Forbidden' })
+        next({ name: 'Login', query: { redirect: to.fullPath } })
         return
       }
     }

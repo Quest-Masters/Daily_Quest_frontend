@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import BaseInput from '@/components/BaseSetting/BaseInput.vue'
 import BaseButton from '@/components/BaseSetting/BaseButton.vue'
 import { useUserLoginStore } from '@/modules/user/login/login-store.js'
@@ -23,8 +23,20 @@ const errors = reactive({
 
 const loginStore = useUserLoginStore()
 const router = useRouter()
+const route = useRoute()
 
 const { validateId, validatePassword, validateLogin } = useValidation(form, errors)
+
+// 카카오 로그인 핸들러
+const handleKakaoLogin = () => {
+  // 카카오 로그인 플로우에서도 redirect를 유지하기 위해 localStorage에 저장
+  const redirectPath = route.query.redirect
+  if (redirectPath) {
+    localStorage.setItem('login_redirect', redirectPath)
+  }
+  // rememberMe를 파라미터로 전달
+  loginStore.loginWithKakao(form.rememberMe)
+}
 
 watch(() => form.id, validateId)
 watch(() => form.password, validatePassword)
@@ -49,7 +61,9 @@ const handleSubmit = async () => {
 
     if (success) {
       loginExpiresAt.value = loginStore.expiresAt // Pinia에서 받은 로그인 만료 시간
-      router.push('/')
+      // 원래 가려던 페이지가 있으면 그곳으로, 없으면 홈으로 이동
+      const redirectPath = route.query.redirect || '/'
+      router.push(redirectPath)
     } else {
       errorMessage.value = loginStore.errorMessage
     }
@@ -100,6 +114,19 @@ const handleSubmit = async () => {
     </base-button>
 
     <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
+
+    <div class="divider">
+      <span>또는</span>
+    </div>
+
+    <button type="button" class="kakao-login-button" @click="handleKakaoLogin">
+      <svg class="kakao-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M12 3C6.477 3 2 6.477 2 10.5c0 2.442 1.632 4.592 4.121 5.836-.179.654-.656 2.399-.758 2.774-.122.449.164.443.345.322.145-.097 2.313-1.548 3.297-2.201.649.088 1.316.135 2.995.135 5.523 0 10-3.477 10-7.866C22 6.477 17.523 3 12 3z"
+        />
+      </svg>
+      카카오로 시작하기
+    </button>
 
     <div class="auth-links">
       <p>
@@ -177,5 +204,59 @@ const handleSubmit = async () => {
 
 .auth-links a:hover {
   text-decoration: underline;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: var(--text-secondary);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.divider span {
+  padding: 0 1rem;
+  font-size: 0.875rem;
+}
+
+.kakao-login-button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background-color: #fee500;
+  color: #000000;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.kakao-login-button:hover {
+  background-color: #fdd835;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(254, 229, 0, 0.3);
+}
+
+.kakao-login-button:active {
+  transform: translateY(0);
+}
+
+.kakao-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
 }
 </style>
