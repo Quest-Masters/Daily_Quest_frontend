@@ -149,7 +149,7 @@ const handleSubmit = async () => {
 
   try {
     // ✅ 실제 axios API 요청
-    const response = await axios.post('/api/users/register', formData)
+    await axios.post('/api/users/register', formData)
 
     alert('회원가입 성공!')
     registerStore.resetForm() // 회원가입 성공 시 폼 초기화

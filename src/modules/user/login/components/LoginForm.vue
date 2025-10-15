@@ -78,7 +78,7 @@ const handleSubmit = async () => {
     } else {
       errorMessage.value = loginStore.errorMessage
     }
-  } catch (e) {
+  } catch {
     errorMessage.value = '로그인 처리 중 오류가 발생했습니다.'
   } finally {
     isLoading.value = false
