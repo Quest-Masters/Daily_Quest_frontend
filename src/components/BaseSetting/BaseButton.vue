@@ -9,7 +9,7 @@ defineProps({
     type: Boolean,
     default: false,
   },
-  disable: {
+  disabled: {
     type: Boolean,
     default: false,
   },

@@ -53,7 +53,15 @@ onMounted(async () => {
       if (response.data.success) {
         // 로그인 상태 업데이트
         loginStore.token = token
-        loginStore.expiresAt = new Date(parseInt(expiresAt)).toISOString()
+
+        // expiresAt이 숫자인지 확인하고 유효한 Date로 변환
+        if (expiresAt && !isNaN(expiresAt)) {
+          loginStore.expiresAt = new Date(parseInt(expiresAt)).toISOString()
+        } else {
+          // 만약 유효하지 않으면 현재 시간 + 1시간으로 설정
+          loginStore.expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+        }
+
         loginStore.isLoggedIn = true
         loginStore.currentUser = {
           userId: response.data.userId,
