@@ -137,9 +137,16 @@ export const useUserLoginStore = defineStore('userLogin', () => {
     isRefreshing.value = true
 
     try {
-      // 카카오 로그인 사용자인지 확인 (userId가 kakao_로 시작)
+      // 소셜 로그인 사용자인지 확인 (userId가 kakao_ 또는 google_로 시작)
       const isKakaoUser = currentUser.value?.userId?.startsWith('kakao_')
-      const refreshEndpoint = isKakaoUser ? '/api/auth/kakao/refresh' : '/api/users/refresh'
+      const isGoogleUser = currentUser.value?.userId?.startsWith('google_')
+
+      let refreshEndpoint = '/api/users/refresh'
+      if (isKakaoUser) {
+        refreshEndpoint = '/api/auth/kakao/refresh'
+      } else if (isGoogleUser) {
+        refreshEndpoint = '/api/auth/google/refresh'
+      }
 
       console.log(`🔄 토큰 갱신 시도: ${refreshEndpoint}`)
 
@@ -153,7 +160,7 @@ export const useUserLoginStore = defineStore('userLogin', () => {
 
       const data = response.data
       if (data.success) {
-        // 카카오 로그인은 응답에 token이 없을 수 있음 (쿠키로 자동 설정)
+        // 소셜 로그인은 응답에 token이 없을 수 있음 (쿠키로 자동 설정)
         if (data.token) {
           token.value = data.token
         } else {
@@ -164,8 +171,9 @@ export const useUserLoginStore = defineStore('userLogin', () => {
         const expireTime = new Date(Date.now() + 1000 * 60 * 60) // 1시간
         expiresAt.value = expireTime.toISOString()
 
-        // 카카오는 서버에서 쿠키 설정, 일반 로그인은 클라이언트에서 설정
-        if (!isKakaoUser && data.token) {
+        // 소셜 로그인은 서버에서 쿠키 설정, 일반 로그인은 클라이언트에서 설정
+        const isSocialLogin = isKakaoUser || isGoogleUser
+        if (!isSocialLogin && data.token) {
           setAccessToken(data.token, Date.now() + 1000 * 60 * 60) // 1시간
         }
 
@@ -188,9 +196,16 @@ export const useUserLoginStore = defineStore('userLogin', () => {
   // 수동 세션 갱신 함수 (refreshAccessToken과 동일하지만 에러 메시지 설정 포함)
   const refreshSession = async () => {
     try {
-      // 카카오 로그인 사용자인지 확인 (userId가 kakao_로 시작)
+      // 소셜 로그인 사용자인지 확인 (userId가 kakao_ 또는 google_로 시작)
       const isKakaoUser = currentUser.value?.userId?.startsWith('kakao_')
-      const refreshEndpoint = isKakaoUser ? '/api/auth/kakao/refresh' : '/api/users/refresh'
+      const isGoogleUser = currentUser.value?.userId?.startsWith('google_')
+
+      let refreshEndpoint = '/api/users/refresh'
+      if (isKakaoUser) {
+        refreshEndpoint = '/api/auth/kakao/refresh'
+      } else if (isGoogleUser) {
+        refreshEndpoint = '/api/auth/google/refresh'
+      }
 
       const response = await axios.post(
         refreshEndpoint,
@@ -201,7 +216,7 @@ export const useUserLoginStore = defineStore('userLogin', () => {
       )
       const data = response.data
       if (data.success) {
-        // 카카오 로그인은 응답에 token이 없을 수 있음 (쿠키로 자동 설정)
+        // 소셜 로그인은 응답에 token이 없을 수 있음 (쿠키로 자동 설정)
         if (data.token) {
           token.value = data.token
         } else {
@@ -211,8 +226,9 @@ export const useUserLoginStore = defineStore('userLogin', () => {
         const expireTime = new Date(Date.now() + 1000 * 60 * 60) // 1시간
         expiresAt.value = expireTime.toISOString()
 
-        // 카카오는 서버에서 쿠키 설정, 일반 로그인은 클라이언트에서 설정
-        if (!isKakaoUser && data.token) {
+        // 소셜 로그인은 서버에서 쿠키 설정, 일반 로그인은 클라이언트에서 설정
+        const isSocialLogin = isKakaoUser || isGoogleUser
+        if (!isSocialLogin && data.token) {
           setAccessToken(data.token, Date.now() + 1000 * 60 * 60) // 1시간
         }
 
@@ -293,6 +309,34 @@ export const useUserLoginStore = defineStore('userLogin', () => {
     }
   }
 
+  // 구글 로그인 URL 가져오기
+  const getGoogleLoginUrl = async (rememberMe = false) => {
+    try {
+      const response = await axios.get('/api/auth/google/login-url', {
+        params: { rememberMe },
+      })
+      return response.data.loginUrl
+    } catch (error) {
+      console.error('구글 로그인 URL 가져오기 실패:', error)
+      errorMessage.value = '구글 로그인을 시작할 수 없습니다.'
+      return null
+    }
+  }
+
+  // 구글 로그인 시작 (구글 로그인 페이지로 리다이렉트)
+  const loginWithGoogle = async (rememberMe = false) => {
+    try {
+      const loginUrl = await getGoogleLoginUrl(rememberMe)
+      if (loginUrl) {
+        // 구글 로그인 페이지로 리다이렉트
+        window.location.href = loginUrl
+      }
+    } catch (error) {
+      console.error('구글 로그인 시작 실패:', error)
+      errorMessage.value = '구글 로그인을 시작할 수 없습니다.'
+    }
+  }
+
   return {
     isLoggedIn,
     currentUser,
@@ -307,5 +351,6 @@ export const useUserLoginStore = defineStore('userLogin', () => {
     refreshAccessToken,
     loginWithKakao,
     handleKakaoCallback,
+    loginWithGoogle,
   }
 })
