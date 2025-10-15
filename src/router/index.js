@@ -5,6 +5,7 @@ import Register from '@/modules/user/register/views/RegisterPage.vue'
 import FindId from '@/modules/user/auth/FindId.vue'
 import FindPassword from '@/modules/user/auth/FindPassword.vue'
 import KakaoCallback from '@/modules/user/auth/views/KakaoCallback.vue'
+import GoogleCallback from '@/modules/user/auth/views/GoogleCallback.vue'
 import NotFound from '@/components/NotFound.vue'
 import Forbidden from '@/components/Forbidden.vue'
 import ServerError from '@/components/ServerError.vue'
@@ -52,6 +53,11 @@ const routes = [
     path: '/auth/kakao/callback',
     name: 'KakaoCallback',
     component: KakaoCallback,
+  },
+  {
+    path: '/auth/google/callback',
+    name: 'GoogleCallback',
+    component: GoogleCallback,
   },
   { path: '/ai-quest', name: 'AiQuestGenerator', component: AiQuestGenerator },
 
