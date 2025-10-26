@@ -12,12 +12,14 @@ export const setCookie = (name, value, days = 7) => {
     date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000)
     expires = '; expires=' + date.toUTCString()
   }
-  document.cookie = name + '=' + (value || '') + expires + '; path=/; Secure; SameSite=Strict'
+  // Secure 제거: localhost HTTP 환경에서 작동하도록 수정
+  document.cookie = name + '=' + (value || '') + expires + '; path=/; SameSite=Lax'
 }
 
 export const deleteCookie = (name) => {
+  // Secure 제거: localhost HTTP 환경에서 작동하도록 수정
   document.cookie =
-    name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Secure; SameSite=Strict'
+    name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax'
 }
 
 export const getAccessToken = () => {

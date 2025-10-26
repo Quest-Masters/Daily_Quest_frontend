@@ -77,19 +77,38 @@ export const useUserLoginStore = defineStore('userLogin', () => {
     const storedToken = getAccessToken()
     const storedExpiresAt = getTokenExpiry()
 
-    if (storedToken && storedExpiresAt) {
-      token.value = storedToken
-      expiresAt.value = new Date(parseInt(storedExpiresAt)).toISOString()
+    console.log('🔄 세션 복원 시도:', {
+      hasToken: !!storedToken,
+      hasExpiry: !!storedExpiresAt,
+      token: storedToken ? storedToken.substring(0, 20) + '...' : 'null',
+    })
 
-      // 토큰 만료 확인
-      if (!isTokenExpired()) {
+    if (storedToken) {
+      token.value = storedToken
+
+      // expires_at이 없거나 유효하지 않으면 기본값 설정
+      if (storedExpiresAt && !isNaN(parseInt(storedExpiresAt))) {
+        expiresAt.value = new Date(parseInt(storedExpiresAt)).toISOString()
+      } else {
+        // 기본적으로 현재 시간 + 1시간
+        expiresAt.value = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+        console.log('⚠️ expires_at 쿠키가 없어서 기본값 설정')
+      }
+
+      // 토큰 만료 확인 (expires_at이 없으면 항상 유효하다고 간주)
+      const expired = storedExpiresAt ? isTokenExpired() : false
+
+      if (!expired) {
         // 토큰이 유효하면 서버에서 사용자 정보 가져오기
         try {
-          const response = await axios.get('/api/profile', {
+          console.log('📡 /api/users/profile 요청 시작...')
+          const response = await axios.get('/api/users/profile', {
             withCredentials: true,
           })
 
-          if (response.data) {
+          console.log('📨 /api/users/profile 응답:', response.data)
+
+          if (response.data && response.data.userId) {
             currentUser.value = {
               userId: response.data.userId,
               name: response.data.name,
@@ -98,9 +117,16 @@ export const useUserLoginStore = defineStore('userLogin', () => {
             }
             isLoggedIn.value = true
             console.log('✅ 세션 복원 성공: 사용자 정보 로드됨', currentUser.value)
+          } else {
+            console.warn('⚠️ /api/profile 응답에 userId가 없음')
           }
         } catch (error) {
           console.error('❌ 사용자 정보 조회 실패:', error)
+          console.error('에러 상세:', {
+            status: error.response?.status,
+            message: error.response?.data?.message || error.message,
+          })
+
           // 401 에러면 토큰 갱신 시도
           if (error.response?.status === 401) {
             console.log('⏰ 토큰이 만료됨, refresh 토큰으로 갱신 시도...')
@@ -108,6 +134,9 @@ export const useUserLoginStore = defineStore('userLogin', () => {
             if (refreshSuccess) {
               // 갱신 성공 후 사용자 정보 다시 가져오기
               await restoreSession()
+            } else {
+              console.log('❌ 토큰 갱신 실패: 로그아웃 처리')
+              logout()
             }
           }
         }
@@ -121,6 +150,7 @@ export const useUserLoginStore = defineStore('userLogin', () => {
           await restoreSession()
         } else {
           console.log('❌ 토큰 갱신 실패: 로그아웃 처리')
+          logout()
         }
       }
     } else {
